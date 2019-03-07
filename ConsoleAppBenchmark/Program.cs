@@ -20,7 +20,7 @@ namespace ConsoleAppBenchmark
             public LocalCoreClrConfig()
             {
                 AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\control_0b6aa70f",
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\control_1382754a",
                     displayName: "baseline",
                     isBaseline: true);
 
@@ -75,7 +75,7 @@ namespace ConsoleAppBenchmark
         static void Main(string[] args)
         {
             // var summary = BenchmarkRunner.Run<Runner>(new LocalCoreClrConfig());
-            // var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>();
             // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<HashRunner>(new LocalCoreClrConfig());
@@ -85,7 +85,7 @@ namespace ConsoleAppBenchmark
             //runner.Setup();
             //runner.WithVector();
 
-            var summary = BenchmarkRunner.Run<JsonRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<JsonRunner>(new LocalCoreClrConfig());
         }
     }
 

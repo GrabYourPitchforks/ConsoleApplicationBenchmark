@@ -12,7 +12,8 @@ namespace ConsoleAppBenchmark
         private string _strAllAscii;
         private string _strWithNonAsciiData;
 
-        [Params(0, 1, 2, 3, 4, 8, 12, 16, 32, 64, 128)]
+        // [Params(0, 1, 2, 3, 4, 8, 12, 16, 32, 64, 128)]
+        [Params(0, 4, 29)]
         public int StringLength;
 
         [GlobalSetup]
