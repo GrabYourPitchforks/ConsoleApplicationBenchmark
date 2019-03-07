@@ -1,30 +1,15 @@
-using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Environments;
-using BenchmarkDotNet.Jobs;
-using BenchmarkDotNet.Running;
-using BenchmarkDotNet.Toolchains.CsProj;
-using BenchmarkDotNet.Toolchains.DotNetCli;
 using System;
-using System.Text.Unicode;
 using System.Buffers;
-using System.Buffers.Binary;
-using System.Buffers.Text;
-using System.Globalization;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 using System.Text;
-using System.Text.Encodings.Web;
-using System.Threading;
-using System.Diagnostics;
-using System.Security.Cryptography;
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Toolchains.CoreRun;
-using System.Collections.Generic;
 
 namespace ConsoleAppBenchmark
 {
@@ -103,44 +88,6 @@ namespace ConsoleAppBenchmark
             var summary = BenchmarkRunner.Run<JsonRunner>(new LocalCoreClrConfig());
         }
     }
-
-    //public class AsciiRunner
-    //{
-    //    private const int ITER_COUNT = 100;
-
-    //    private byte[] _asciiData;
-
-    //    [Params(0, 1, 2, 3, 4, 8, 12, 16, 32, 64, 128)]
-    //    public int AsciiDataLength;
-
-    //    [GlobalSetup]
-    //    public void Setup()
-    //    {
-    //        _asciiData = new byte[AsciiDataLength];
-    //    }
-
-    //    [Benchmark]
-    //    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    //    public int GetChars()
-    //    {
-    //        byte[] asciiData = _asciiData;
-    //        _ = asciiData.Length;
-
-    //        Span<char> chars = stackalloc char[128];
-    //        int charCount = 0;
-
-    //        var encoding = Encoding.ASCII;
-
-    //        for (int i = 0; i < ITER_COUNT; i++)
-    //        {
-    //            //Debugger.Launch();
-    //            //Debugger.Break();
-    //            charCount = encoding.GetChars(asciiData, chars);
-    //        }
-
-    //        return charCount;
-    //    }
-    //}
 
     public class HashRunner
     {
@@ -245,72 +192,6 @@ namespace ConsoleAppBenchmark
         //    }
         //    return retVal;
         //}
-    }
-
-    public class AsciiRunner
-    {
-        private const int ITER_COUNT = 100;
-
-        private string _strAllAscii;
-        private string _strWithNonAsciiData;
-
-        [Params(0, 1, 2, 3, 4, 8, 12, 16, 32, 64, 128)]
-        public int StringLength;
-
-        [GlobalSetup]
-        public void Setup()
-        {
-            _strAllAscii = new string('x', StringLength);
-            _strWithNonAsciiData = _strAllAscii + "é" + _strAllAscii + "\U0010FFFF" + _strAllAscii;
-        }
-
-        [Benchmark]
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public int GetBytes()
-        {
-            ReadOnlySpan<char> chars = _strAllAscii;
-            Span<byte> bytes = stackalloc byte[128];
-
-            int byteCount = 0;
-            for (int i = 0; i < ITER_COUNT; i++)
-            {
-                byteCount = Encoding.ASCII.GetBytes(chars, bytes);
-            }
-
-            return byteCount;
-        }
-
-        [Benchmark]
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public int GetBytes_WithFallback()
-        {
-            ReadOnlySpan<char> chars = _strWithNonAsciiData;
-            Span<byte> bytes = stackalloc byte[512];
-
-            int byteCount = 0;
-            for (int i = 0; i < ITER_COUNT; i++)
-            {
-                byteCount = Encoding.ASCII.GetBytes(chars, bytes);
-            }
-
-            return byteCount;
-        }
-
-        [Benchmark]
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public int GetByteCount()
-        {
-            string str = _strAllAscii;
-            _ = str.Length; // null check
-
-            int byteCount = 0;
-            for (int i = 0; i < ITER_COUNT; i++)
-            {
-                byteCount = Encoding.ASCII.GetByteCount(str);
-            }
-
-            return byteCount;
-        }
     }
 
     public class MemoryRunner
