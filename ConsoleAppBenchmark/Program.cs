@@ -25,8 +25,8 @@ namespace ConsoleAppBenchmark
                     isBaseline: true);
 
                 AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\var_432173f1",
-                    displayName: "exp-A");
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\var_a088a2fb",
+                    displayName: "modified");
 
                 Add(DefaultConfig.Instance.GetExporters().ToArray());
                 Add(DefaultConfig.Instance.GetLoggers().ToArray());
@@ -74,8 +74,9 @@ namespace ConsoleAppBenchmark
 
         static void Main(string[] args)
         {
+            var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>(new LocalCoreClrConfig());
-            var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>();
             // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<HashRunner>(new LocalCoreClrConfig());
