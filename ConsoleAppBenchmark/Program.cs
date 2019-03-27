@@ -19,14 +19,30 @@ namespace ConsoleAppBenchmark
         {
             public LocalCoreClrConfig()
             {
+                //AddCustom30Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\30-master",
+                //    displayName: "3.0-master",
+                //    isBaseline: true);
+
+                //AddCustom30Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode",
+                //    displayName: "proposal",
+                //    isBaseline: false);
+
                 AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\control_1382754a",
-                    displayName: "baseline",
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode2",
+                    displayName: "hashcode2",
                     isBaseline: true);
 
                 AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\var_a088a2fb",
-                    displayName: "modified");
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode3",
+                    displayName: "hashcode3",
+                    isBaseline: false);
+
+                //AddCustom30Toolchain(
+                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_test_no_hi",
+                //   displayName: "without_intrin",
+                //   isasToSuppress: "AVX2");
 
                 Add(DefaultConfig.Instance.GetExporters().ToArray());
                 Add(DefaultConfig.Instance.GetLoggers().ToArray());
@@ -74,12 +90,12 @@ namespace ConsoleAppBenchmark
 
         static void Main(string[] args)
         {
-            var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>();
             // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
-            // var summary = BenchmarkRunner.Run<HashRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<HashRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<MemoryRunner>(new LocalCoreClrConfig());
 
             //var runner = new JsonRunner();
@@ -87,74 +103,6 @@ namespace ConsoleAppBenchmark
             //runner.WithVector();
 
             // var summary = BenchmarkRunner.Run<JsonRunner>(new LocalCoreClrConfig());
-        }
-    }
-
-    public class HashRunner
-    {
-        const int ITER_COUNT = 100_000;
-
-        //private string _strData;
-
-        //[Params(0, 1, 3, 7, 16, 21, 32, 128)]
-        //public int InputLength;
-
-        //[GlobalSetup]
-        //public void Setup()
-        //{
-        //    _strData = new string('\u927f', InputLength);
-        //}
-
-        //[Benchmark]
-        //public int StringGetHashcode()
-        //{
-        //    int retVal = default;
-        //    string data = _strData;
-        //    _ = data.Length;
-
-        //    for (int i = 0; i < ITER_COUNT; i++)
-        //    {
-        //        retVal = data.GetHashCode();
-        //    }
-
-        //    return retVal;
-        //}
-
-        [Params("0 - 8", "6 - 24", "20 - 96", "64 - 256")]
-        public string InputLength;
-
-        private string[] _strings;
-
-        [GlobalSetup]
-        public void Setup()
-        {
-            Random r = new Random(0x12345);
-
-            string[] inputLengths = InputLength.Split(" - ");
-            int minInclusive = int.Parse(inputLengths[0]);
-            int maxExclusive = int.Parse(inputLengths[1]) + 1;
-
-            string[] strings = new string[50_000];
-            for (int i = 0; i < strings.Length; i++)
-            {
-                strings[i] = new string('\u1234', r.Next(minInclusive, maxExclusive));
-            }
-
-            _strings = strings;
-        }
-
-        [Benchmark]
-        public int StringGetHashcode()
-        {
-            int retVal = default;
-
-            string[] strings = _strings;
-            for (int i = 0; i < strings.Length; i++)
-            {
-                retVal ^= strings[i].GetHashCode();
-            }
-
-            return retVal;
         }
     }
 
@@ -193,108 +141,6 @@ namespace ConsoleAppBenchmark
         //    }
         //    return retVal;
         //}
-    }
-
-    public class MemoryRunner
-    {
-        private ReadOnlyMemory<byte> _romBytesFromArray = new byte[1024];
-        private ReadOnlyMemory<byte> _romBytesFromMM = new MyMemoryManager<byte>().Memory;
-        private ReadOnlyMemory<byte> _romBytesEmpty = ReadOnlyMemory<byte>.Empty;
-
-        private ReadOnlyMemory<char> _romCharsFromString = new string('x', 1024).AsMemory();
-        private ReadOnlyMemory<char> _romCharsFromArray = new char[1024];
-        private ReadOnlyMemory<char> _romCharsFromMM = new MyMemoryManager<char>().Memory;
-        private ReadOnlyMemory<char> _romCharsEmpty = ReadOnlyMemory<char>.Empty;
-
-        private const int NUM_ITERS = 1_000_000;
-
-        [Benchmark]
-        public int GetSpan_MemOfBytesFromArray()
-        {
-            return DoTest(_romBytesFromArray);
-        }
-
-        [Benchmark]
-        public int GetSpan_MemOfBytesFromMemMgr()
-        {
-            return DoTest(_romBytesFromMM);
-        }
-
-        [Benchmark]
-        public int GetSpan_MemOfBytesEmpty()
-        {
-            return DoTest(_romBytesEmpty);
-        }
-
-        [Benchmark]
-        public int GetSpan_MemOfCharsFromArray()
-        {
-            return DoTest(_romCharsFromArray);
-        }
-
-        [Benchmark]
-        public int GetSpan_MemOfCharsFromString()
-        {
-            return DoTest(_romCharsFromString);
-        }
-
-        [Benchmark]
-        public int GetSpan_MemOfCharsFromMemMgr()
-        {
-            return DoTest(_romCharsFromMM);
-        }
-
-        [Benchmark]
-        public int GetSpan_MemOfCharsEmpty()
-        {
-            return DoTest(_romCharsEmpty);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T DoTest<T>(in ReadOnlyMemory<T> rom) => DoTest<T>(in rom, out _);
-
-        public static T DoTest<T>(in ReadOnlyMemory<T> rom, out int unused)
-        {
-            int totalLength = default;
-            T retVal = default;
-            for (int i = 0; i < NUM_ITERS; i++)
-            {
-                var span = rom.Span;
-                totalLength += span.Length;
-
-                if (!span.IsEmpty)
-                {
-                    retVal = span[0];
-                }
-            }
-            unused = totalLength;
-            return retVal;
-        }
-
-        private sealed class MyMemoryManager<T> : MemoryManager<T>
-        {
-            private readonly T[] _arr = new T[1024];
-
-            public override Span<T> GetSpan()
-            {
-                return _arr;
-            }
-
-            public override MemoryHandle Pin(int elementIndex = 0)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void Unpin()
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                throw new NotImplementedException();
-            }
-        }
     }
 
     //public class Runner
