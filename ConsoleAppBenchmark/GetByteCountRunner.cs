@@ -123,9 +123,12 @@ namespace ConsoleAppBenchmark
                         //              ^   ^-- set if char[0] is non-ASCII
                         //              `-- set if char[1] is non-ASCII
                         //
-                        // This means we can popcnt the number of set bits, and it's the number
-                        // of *additional* UTF-8 bytes that each UTF-16 code unit requires as
-                        // it expands. We'll handle surrogates in just a moment.
+                        // This means we can popcnt the number of set bits, and the result is the
+                        // number of *additional* UTF-8 bytes that each UTF-16 code unit requires as
+                        // it expands. This results in the wrong count for UTF-16 surrogate code
+                        // units (we just counted that each individual code unit expands to 3 bytes,
+                        // but in reality a well-formed UTF-16 surrogate pair expands to 4 bytes).
+                        // We'll handle this in just a moment.
 
                         tempUtf8CodeUnitCountAdjustment += (uint)BitOperations.PopCount(mask);
 
@@ -147,11 +150,10 @@ namespace ConsoleAppBenchmark
                             // A UTF-16 high/low surrogate code unit has the bit pattern [ 11011q## ######## ],
                             // where # is any bit; q = 0 represents a high surrogate, and q = 1 represents
                             // a low surrogate. Since we added 0xA800 in the vectorized operation above,
-                            // our surrogate pairs will now have the bit pattern [ 00011q## ######## ].
-                            // If we logical right-shift each word by 3, the 'q' bit will end up as the high
-                            // bit of the low byte of each word (and the high bit of the word will be cleared,
-                            // which means we can then immediately use pmovmskb to determine whether a given
-                            // char was a high or a low surrogate.
+                            // our surrogate pairs will now have the bit pattern [ 10000q## ######## ].
+                            // If we logical right-shift each word by 3, we'll end up with the bit pattern
+                            // [ 00010000 q####### ], which means that we can immediately use pmovmskb to
+                            // determine whether a given char was a high or a low surrogate.
                             //
                             // Therefore the resulting bits of 'mask2' will occur in pairs:
                             // - 00 if the corresponding UTF-16 char was a high surrogate code unit;
