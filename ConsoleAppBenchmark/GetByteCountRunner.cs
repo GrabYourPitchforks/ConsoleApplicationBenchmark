@@ -88,17 +88,17 @@ namespace ConsoleAppBenchmark
             long tempUtf8CodeUnitCountAdjustment = 0;
             int tempScalarCountAdjustment = 0;
 
-            if (inputLength >= 8)
+            if (Sse41.IsSupported && inputLength >= 8)
             {
                 // The common case of all-ASCII should've been handled earlier by
                 // GetIndexOfFirstNonAsciiChar. If we got here, it means we saw some
                 // non-ASCII data, so from here on out we'll handle all non-surrogate
                 // UTF-16 code points branchlessly. We'll only branch if we see surrogates.
 
-                Vector128<ushort> pminuwStuffVec80 = Vector128.Create((ushort)0x80);
-                Vector128<ushort> pminuwStuffVec800 = Sse2.ShiftLeftLogical(pminuwStuffVec80, 4); // = 0x0800
-                Vector128<ushort> pAddSurr = Vector128.Create((ushort)0xA800);
-                Vector128<short> pSurrCmp800 = Vector128.Create(unchecked((short)0x8800));
+                Vector128<ushort> vector0080 = Vector128.Create((ushort)0x80);
+                Vector128<ushort> vector0800 = Sse2.ShiftLeftLogical(vector0080, 4); // = 0x0800
+                Vector128<ushort> vectorA800 = Vector128.Create((ushort)0xA800);
+                Vector128<short> vector8800 = Vector128.Create(unchecked((short)0x8800));
 
                 do
                 {
@@ -106,8 +106,8 @@ namespace ConsoleAppBenchmark
 
                     uint mask = (uint)Sse2.MoveMask(
                         Sse2.Or(
-                            Sse2.ShiftLeftLogical(Sse41.Min(utf16Data, pminuwStuffVec80), 8),
-                            Sse2.ShiftRightLogical(Sse41.Min(utf16Data, pminuwStuffVec800), 4)).AsByte());
+                            Sse2.ShiftLeftLogical(Sse41.Min(utf16Data, vector0080), 8),
+                            Sse2.ShiftRightLogical(Sse41.Min(utf16Data, vector0800), 4)).AsByte());
 
                     // Each even bit of mask will be 1 only if the char was >= 0x0080,
                     // and each odd bit of mask will be 1 only if the char was >= 0x0800.
@@ -131,8 +131,8 @@ namespace ConsoleAppBenchmark
                     // to account for the fact that we over-counted in the addition above;
                     // and (b) they require separate validation.
 
-                    utf16Data = Sse2.Add(utf16Data, pAddSurr);
-                    mask = (uint)Sse2.MoveMask(Sse2.CompareLessThan(utf16Data.AsInt16(), pSurrCmp800).AsByte());
+                    utf16Data = Sse2.Add(utf16Data, vectorA800);
+                    mask = (uint)Sse2.MoveMask(Sse2.CompareLessThan(utf16Data.AsInt16(), vector8800).AsByte());
 
                     if (mask != 0)
                     {
@@ -185,7 +185,7 @@ namespace ConsoleAppBenchmark
 
                         int surrogatePairsCount = BitOperations.PopCount(highSurrogatesMask);
 
-                        // 2 UTF-16 chars becomes 1 Unicode scalar
+                        // 2 UTF-16 chars become 1 Unicode scalar
                         tempScalarCountAdjustment -= surrogatePairsCount;
 
                         // Since each surrogate code unit was >= 0x0800, we eagerly assumed
@@ -199,9 +199,6 @@ namespace ConsoleAppBenchmark
                     inputLength -= 8;
                 } while (inputLength >= 8);
             }
-
-            Debug.Assert(tempScalarCountAdjustment % 2 == 0);
-            tempScalarCountAdjustment >>= 2;
 
             for (; inputLength > 0; pInputBuffer++, inputLength--)
             {
