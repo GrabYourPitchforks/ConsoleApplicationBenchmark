@@ -63,9 +63,9 @@ namespace ConsoleAppBenchmark
         {
             fixed (char* pContents = &MemoryMarshal.GetReference(contents))
             {
-                char* pFirstInvalidChar = GetPointerToFirstInvalidChar(pContents, contents.Length, out ulong utf8CodeUnitCountAdjustment, out _);
+                char* pFirstInvalidChar = GetPointerToFirstInvalidChar(pContents, contents.Length, out long utf8CodeUnitCountAdjustment, out _);
 
-                ulong temp = (ulong)(pFirstInvalidChar - pContents) + utf8CodeUnitCountAdjustment;
+                long temp = (long)(pFirstInvalidChar - pContents) + utf8CodeUnitCountAdjustment;
                 return checked((int)temp);
             }
         }
@@ -88,117 +88,206 @@ namespace ConsoleAppBenchmark
             long tempUtf8CodeUnitCountAdjustment = 0;
             int tempScalarCountAdjustment = 0;
 
-            if (Sse41.IsSupported && inputLength >= 8)
+            if (Sse41.IsSupported)
             {
-                // The common case of all-ASCII should've been handled earlier by
-                // GetIndexOfFirstNonAsciiChar. If we got here, it means we saw some
-                // non-ASCII data, so from here on out we'll handle all non-surrogate
-                // UTF-16 code points branchlessly. We'll only branch if we see surrogates.
-
-                Vector128<ushort> vector0080 = Vector128.Create((ushort)0x80);
-                Vector128<ushort> vector0800 = Sse2.ShiftLeftLogical(vector0080, 4); // = 0x0800
-                Vector128<ushort> vectorA800 = Vector128.Create((ushort)0xA800);
-                Vector128<short> vector8800 = Vector128.Create(unchecked((short)0x8800));
-
-                do
+                if (inputLength >= 8)
                 {
-                    Vector128<ushort> utf16Data = Sse2.LoadVector128((ushort*)pInputBuffer);
+                    // The common case of all-ASCII should've been handled earlier by
+                    // GetIndexOfFirstNonAsciiChar. If we got here, it means we saw some
+                    // non-ASCII data, so from here on out we'll handle all non-surrogate
+                    // UTF-16 code points branchlessly. We'll only branch if we see surrogates.
 
-                    uint mask = (uint)Sse2.MoveMask(
-                        Sse2.Or(
-                            Sse2.ShiftLeftLogical(Sse41.Min(utf16Data, vector0080), 8),
-                            Sse2.ShiftRightLogical(Sse41.Min(utf16Data, vector0800), 4)).AsByte());
+                    Vector128<ushort> vector0080 = Vector128.Create((ushort)0x80);
+                    Vector128<ushort> vector0800 = Sse2.ShiftLeftLogical(vector0080, 4); // = 0x0800
+                    Vector128<ushort> vectorA800 = Vector128.Create((ushort)0xA800);
+                    Vector128<short> vector8800 = Vector128.Create(unchecked((short)0x8800));
 
-                    // Each even bit of mask will be 1 only if the char was >= 0x0080,
-                    // and each odd bit of mask will be 1 only if the char was >= 0x0800.
-                    //
-                    // Example:
-                    //
-                    //            ,-- set if char[1] is >= 0x800
-                    //            |   ,-- set if char[0] is >= 0x800
-                    //            v   v
-                    // mask = ... 1 1 0 1
-                    //              ^   ^-- set if char[0] is non-ASCII
-                    //              `-- set if char[1] is non-ASCII
-                    //
-                    // This means we can popcnt the number of set bits, and it's the number
-                    // of *additional* UTF-8 bytes that each UTF-16 code unit requires as
-                    // it expands. We'll handle surrogates in just a moment.
-
-                    tempUtf8CodeUnitCountAdjustment += (uint)BitOperations.PopCount(mask);
-
-                    // Surrogates need to be special-cased for two reasons: (a) we need
-                    // to account for the fact that we over-counted in the addition above;
-                    // and (b) they require separate validation.
-
-                    utf16Data = Sse2.Add(utf16Data, vectorA800);
-                    mask = (uint)Sse2.MoveMask(Sse2.CompareLessThan(utf16Data.AsInt16(), vector8800).AsByte());
-
-                    if (mask != 0)
+                    do
                     {
-                        // There's at least one UTF-16 surrogate code unit present.
-                        // Since we performed a pmovmskb operation on the result of a 16-bit pcmpgtw,
-                        // the resulting bits of 'mask' will occur in pairs:
-                        // - 00 if the corresponding UTF-16 char was not a surrogate code unit;
-                        // - 11 if the corresponding UTF-16 char was a surrogate code unit.
+                        Vector128<ushort> utf16Data = Sse2.LoadVector128((ushort*)pInputBuffer);
+
+                        uint mask = (uint)Sse2.MoveMask(
+                            Sse2.Or(
+                                Sse2.ShiftLeftLogical(Sse41.Min(utf16Data, vector0080), 8),
+                                Sse2.ShiftRightLogical(Sse41.Min(utf16Data, vector0800), 4)).AsByte());
+
+                        // Each even bit of mask will be 1 only if the char was >= 0x0080,
+                        // and each odd bit of mask will be 1 only if the char was >= 0x0800.
                         //
-                        // A UTF-16 high/low surrogate code unit has the bit pattern [ 11011q## ######## ],
-                        // where # is any bit; q = 0 represents a high surrogate, and q = 1 represents
-                        // a low surrogate. Since we added 0xA800 in the vectorized operation above,
-                        // our surrogate pairs will now have the bit pattern [ 00011q## ######## ].
-                        // If we logical right-shift each word by 3, the 'q' bit will end up as the high
-                        // bit of the low byte of each word (and the high bit of the word will be cleared,
-                        // which means we can then immediately use pmovmskb to determine whether a given
-                        // char was a high or a low surrogate.
+                        // Example:
                         //
-                        // Therefore the resulting bits of 'mask2' will occur in pairs:
-                        // - 00 if the corresponding UTF-16 char was a high surrogate code unit;
-                        // - 01 if the corresponding UTF-16 char was a low surrogate code unit;
-                        // - ## (garbage) if the corresponding UTF-16 char was not a surrogate code unit.
+                        //            ,-- set if char[1] is >= 0x800
+                        //            |   ,-- set if char[0] is >= 0x800
+                        //            v   v
+                        // mask = ... 1 1 0 1
+                        //              ^   ^-- set if char[0] is non-ASCII
+                        //              `-- set if char[1] is non-ASCII
+                        //
+                        // This means we can popcnt the number of set bits, and it's the number
+                        // of *additional* UTF-8 bytes that each UTF-16 code unit requires as
+                        // it expands. We'll handle surrogates in just a moment.
 
-                        uint mask2 = (uint)Sse2.MoveMask(Sse2.ShiftRightLogical(utf16Data, 3).AsByte());
+                        tempUtf8CodeUnitCountAdjustment += (uint)BitOperations.PopCount(mask);
 
-                        uint lowSurrogatesMask = mask2 & mask; // 01 only if was a low surrogate char, else 00
-                        uint highSurrogatesMask = (mask2 ^ mask) & 0x5555u; // 01 only if was a high surrogate char, else 00
+                        // Surrogates need to be special-cased for two reasons: (a) we need
+                        // to account for the fact that we over-counted in the addition above;
+                        // and (b) they require separate validation.
 
-                        // Now check that each high surrogate is followed by a low surrogate and that each
-                        // low surrogate follows a high surrogate. We make an exception for the case where
-                        // the final char of the vector is a high surrogate, since we can't perform validation
-                        // on it until the next iteration of the loop when we hope to consume the matching
-                        // low surrogate.
+                        utf16Data = Sse2.Add(utf16Data, vectorA800);
+                        mask = (uint)Sse2.MoveMask(Sse2.CompareLessThan(utf16Data.AsInt16(), vector8800).AsByte());
 
-                        if ((ushort)(highSurrogatesMask << 2) != (ushort)lowSurrogatesMask)
+                        if (mask != 0)
                         {
-                            break; // error: mismatched surrogate pair; break out of vectorized logic
+                            // There's at least one UTF-16 surrogate code unit present.
+                            // Since we performed a pmovmskb operation on the result of a 16-bit pcmpgtw,
+                            // the resulting bits of 'mask' will occur in pairs:
+                            // - 00 if the corresponding UTF-16 char was not a surrogate code unit;
+                            // - 11 if the corresponding UTF-16 char was a surrogate code unit.
+                            //
+                            // A UTF-16 high/low surrogate code unit has the bit pattern [ 11011q## ######## ],
+                            // where # is any bit; q = 0 represents a high surrogate, and q = 1 represents
+                            // a low surrogate. Since we added 0xA800 in the vectorized operation above,
+                            // our surrogate pairs will now have the bit pattern [ 00011q## ######## ].
+                            // If we logical right-shift each word by 3, the 'q' bit will end up as the high
+                            // bit of the low byte of each word (and the high bit of the word will be cleared,
+                            // which means we can then immediately use pmovmskb to determine whether a given
+                            // char was a high or a low surrogate.
+                            //
+                            // Therefore the resulting bits of 'mask2' will occur in pairs:
+                            // - 00 if the corresponding UTF-16 char was a high surrogate code unit;
+                            // - 01 if the corresponding UTF-16 char was a low surrogate code unit;
+                            // - ## (garbage) if the corresponding UTF-16 char was not a surrogate code unit.
+
+                            uint mask2 = (uint)Sse2.MoveMask(Sse2.ShiftRightLogical(utf16Data, 3).AsByte());
+
+                            uint lowSurrogatesMask = mask2 & mask; // 01 only if was a low surrogate char, else 00
+                            uint highSurrogatesMask = (mask2 ^ mask) & 0x5555u; // 01 only if was a high surrogate char, else 00
+
+                            // Now check that each high surrogate is followed by a low surrogate and that each
+                            // low surrogate follows a high surrogate. We make an exception for the case where
+                            // the final char of the vector is a high surrogate, since we can't perform validation
+                            // on it until the next iteration of the loop when we hope to consume the matching
+                            // low surrogate.
+
+                            if ((ushort)(highSurrogatesMask << 2) != (ushort)lowSurrogatesMask)
+                            {
+                                break; // error: mismatched surrogate pair; break out of vectorized logic
+                            }
+
+                            if ((highSurrogatesMask & 0x4000_0000u) != 0)
+                            {
+                                // There was a standalone high surrogate at the end of the vector.
+                                // We'll adjust our counters so that we don't consider this char consumed.
+
+                                pInputBuffer--;
+                                inputLength++;
+                                tempUtf8CodeUnitCountAdjustment -= 2;
+                                tempScalarCountAdjustment--;
+                            }
+
+                            int surrogatePairsCount = BitOperations.PopCount(highSurrogatesMask);
+
+                            // 2 UTF-16 chars become 1 Unicode scalar
+                            tempScalarCountAdjustment -= surrogatePairsCount;
+
+                            // Since each surrogate code unit was >= 0x0800, we eagerly assumed
+                            // it'd be encoded as 3 UTF-8 code units. Each surrogate half is only
+                            // encoded as 2 UTF-8 code units (for 4 UTF-8 code units total),
+                            // so we'll adjust this now.
+                            tempUtf8CodeUnitCountAdjustment -= 2 * surrogatePairsCount;
                         }
 
-                        if ((highSurrogatesMask & 0x4000_0000u) != 0)
-                        {
-                            // There was a standalone high surrogate at the end of the vector.
-                            // We'll adjust our counters so that we don't consider this char consumed.
-
-                            pInputBuffer--;
-                            inputLength++;
-                            tempUtf8CodeUnitCountAdjustment -= 2;
-                            tempScalarCountAdjustment--;
-                        }
-
-                        int surrogatePairsCount = BitOperations.PopCount(highSurrogatesMask);
-
-                        // 2 UTF-16 chars become 1 Unicode scalar
-                        tempScalarCountAdjustment -= surrogatePairsCount;
-
-                        // Since each surrogate code unit was >= 0x0800, we eagerly assumed
-                        // it'd be encoded as 3 UTF-8 code units. Each surrogate half is only
-                        // encoded as 2 UTF-8 code units (for 4 UTF-8 code units total),
-                        // so we'll adjust this now.
-                        tempUtf8CodeUnitCountAdjustment -= 2 * surrogatePairsCount;
-                    }
-
-                    pInputBuffer += 8;
-                    inputLength -= 8;
-                } while (inputLength >= 8);
+                        pInputBuffer += 8;
+                        inputLength -= 8;
+                    } while (inputLength >= 8);
+                }
             }
+            else if (Vector.IsHardwareAccelerated)
+            {
+                if (inputLength >= Vector<ushort>.Count)
+                {
+                    // The common case of all-ASCII should've been handled earlier by
+                    // GetIndexOfFirstNonAsciiChar. If we got here, it means we saw some
+                    // non-ASCII data, so from here on out we'll handle all non-surrogate
+                    // UTF-16 code points branchlessly. We'll only branch if we see surrogates.
+
+                    Vector<ushort> vector0080 = new Vector<ushort>(0x0080);
+                    Vector<ushort> vector0400 = new Vector<ushort>(0x0400);
+                    Vector<ushort> vector0800 = new Vector<ushort>(0x0800);
+                    Vector<ushort> vectorD800 = new Vector<ushort>(0xD800);
+
+                    do
+                    {
+                        Vector<ushort> utf16Data = Unsafe.ReadUnaligned<Vector<ushort>>(pInputBuffer);
+                        Vector<ushort> twoOrMoreUtf8Bytes = Vector.GreaterThanOrEqual(utf16Data, vector0080);
+                        Vector<ushort> threeOrMoreUtf8Bytes = Vector.GreaterThanOrEqual(utf16Data, vector0800);
+
+                        Vector<nuint> adjustmentVector = (Vector<nuint>)(-Vector.Add(twoOrMoreUtf8Bytes, threeOrMoreUtf8Bytes));
+                        nuint adjustmentNuint = 0;
+
+                        for (int i = 0; i < Vector<nuint>.Count; i++)
+                        {
+                            adjustmentNuint += adjustmentVector[i];
+                        }
+
+                        uint adjustment32 = (uint)adjustmentNuint;
+                        if (sizeof(nuint) == sizeof(ulong))
+                        {
+                            adjustment32 += (uint)(adjustmentNuint >> 32);
+                        }
+
+                        tempUtf8CodeUnitCountAdjustment += (ushort)adjustment32 + (adjustment32 >> 16);
+
+                        // Check for surrogates
+
+                        utf16Data -= vectorD800;
+                        Vector<ushort> surrogateChars = Vector.LessThan(utf16Data, vector0800);
+                        if (surrogateChars != Vector<ushort>.Zero)
+                        {
+                            Vector<ushort> highSurrogateChars = Vector.LessThan(utf16Data, vector0400);
+                            Vector<ushort> lowSurrogateChars = Vector.AndNot(surrogateChars, highSurrogateChars);
+
+                            int surrogatePairsCount = 0;
+
+                            for (int i = 0; i < Vector<ushort>.Count - 1; i++)
+                            {
+                                surrogatePairsCount -= highSurrogateChars[i];
+                                if (highSurrogateChars[i] != lowSurrogateChars[i + 1])
+                                {
+                                    goto SlowLoop;
+                                }
+                            }
+
+                            if (highSurrogateChars[Vector<ushort>.Count - 1] != 0)
+                            {
+                                // There was a standalone high surrogate at the end of the vector.
+                                // We'll adjust our counters so that we don't consider this char consumed.
+
+                                pInputBuffer--;
+                                inputLength++;
+                                tempUtf8CodeUnitCountAdjustment -= 2;
+                                tempScalarCountAdjustment--;
+                            }
+
+                            surrogatePairsCount &= 0xFFFF;
+
+                            // 2 UTF-16 chars become 1 Unicode scalar
+                            tempScalarCountAdjustment -= surrogatePairsCount;
+
+                            // Since each surrogate code unit was >= 0x0800, we eagerly assumed
+                            // it'd be encoded as 3 UTF-8 code units. Each surrogate half is only
+                            // encoded as 2 UTF-8 code units (for 4 UTF-8 code units total),
+                            // so we'll adjust this now.
+                            tempUtf8CodeUnitCountAdjustment -= 2 * surrogatePairsCount;
+                        }
+
+                        pInputBuffer += Vector<ushort>.Count;
+                        inputLength -= Vector<ushort>.Count;
+                    } while (inputLength >= Vector<ushort>.Count);
+                }
+            }
+
+        SlowLoop:
 
             for (; inputLength > 0; pInputBuffer++, inputLength--)
             {
@@ -224,29 +313,28 @@ namespace ConsoleAppBenchmark
 
                 tempUtf8CodeUnitCountAdjustment -= 2;
 
-                if (!IsHighSurrogateCodePoint(thisChar))
-                {
-                    goto Error;
-                }
-
                 if (inputLength == 1)
                 {
                     goto Error;
                 }
 
-                if (!IsLowSurrogateCodePoint(pInputBuffer[1]))
+                thisChar = Unsafe.ReadUnaligned<uint>(pInputBuffer);
+
+                if (((thisChar - (BitConverter.IsLittleEndian ? 0xDC00_D800u : 0xD800_DC00u)) & 0xFC00_FC00u) != 0)
                 {
-                    goto Error;
+                    goto Error; // not a well-formed surrogate pair
                 }
 
-                tempScalarCountAdjustment--;
-                tempUtf8CodeUnitCountAdjustment += 2;
+                tempScalarCountAdjustment--; // 2 UTF-16 code units -> 1 scalar
+                tempUtf8CodeUnitCountAdjustment += 2; // 2 UTF-16 code units -> 4 UTF-8 code units
 
-                pInputBuffer++;
+                pInputBuffer++; // consumed one extra char
                 inputLength--;
             }
 
         Error:
+
+            // Also used for normal return.
 
             utf8CodeUnitCountAdjustment = tempUtf8CodeUnitCountAdjustment;
             scalarCountAdjustment = tempScalarCountAdjustment;
