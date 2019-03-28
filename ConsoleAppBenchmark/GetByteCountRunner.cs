@@ -70,7 +70,7 @@ namespace ConsoleAppBenchmark
             }
         }
 
-        private static unsafe char* GetPointerToFirstInvalidChar(char* pInputBuffer, int inputLength, out ulong utf8CodeUnitCountAdjustment, out int scalarCountAdjustment)
+        private static unsafe char* GetPointerToFirstInvalidChar(char* pInputBuffer, int inputLength, out long utf8CodeUnitCountAdjustment, out int scalarCountAdjustment)
         {
             int numCharsConsumedJustNow = (int)GetIndexOfFirstNonAsciiChar_Sse2(pInputBuffer, (uint)inputLength);
 
@@ -85,7 +85,7 @@ namespace ConsoleAppBenchmark
 
             inputLength -= numCharsConsumedJustNow;
 
-            ulong tempUtf8CodeUnitCountAdjustment = 0;
+            long tempUtf8CodeUnitCountAdjustment = 0;
             int tempScalarCountAdjustment = 0;
 
             if (inputLength >= 8)
@@ -154,64 +154,47 @@ namespace ConsoleAppBenchmark
                         // Therefore the resulting bits of 'mask2' will occur in pairs:
                         // - 00 if the corresponding UTF-16 char was a high surrogate code unit;
                         // - 01 if the corresponding UTF-16 char was a low surrogate code unit;
-                        // - ## (garbage) if the corresponding UTF-16 char was not a surrogate code unit
-                        //   (we'll normalize ## to 00 through the AND immediately following).
+                        // - ## (garbage) if the corresponding UTF-16 char was not a surrogate code unit.
 
                         uint mask2 = (uint)Sse2.MoveMask(Sse2.ShiftRightLogical(utf16Data, 3).AsByte());
 
-                        mask2 &= mask; // clear any bits that weren't part of actual surrogate chars
+                        uint lowSurrogatesMask = mask2 & mask; // 01 only if was a low surrogate char, else 00
+                        uint highSurrogatesMask = (mask2 ^ mask) & 0x5555u; // 01 only if was a high surrogate char, else 00
 
-                        // Now we perform two checks. The first check is that 
+                        // Now check that each high surrogate is followed by a low surrogate and that each
+                        // low surrogate follows a high surrogate. We make an exception for the case where
+                        // the final char of the vector is a high surrogate, since we can't perform validation
+                        // on it until the next iteration of the loop when we hope to consume the matching
+                        // low surrogate.
 
-                        // Now we want to perform two checks: every high surrogate code unit is followed
-                        // by a low surrogate code unit; and every low surrogate code unit follows a
-                        // high surrogate code unit.
-
-                        if ((((mask2 >> 2) + mask2) & 0x0001_AAAAu) != 0)
+                        if ((ushort)(highSurrogatesMask << 2) != (ushort)lowSurrogatesMask)
                         {
-
+                            break; // error: mismatched surrogate pair; break out of vectorized logic
                         }
 
+                        if ((highSurrogatesMask & 0x4000_0000u) != 0)
+                        {
+                            // There was a standalone high surrogate at the end of the vector.
+                            // We'll adjust our counters so that we don't consider this char consumed.
 
-                        // 'mask2' will have 
+                            pInputBuffer--;
+                            inputLength++;
+                            tempUtf8CodeUnitCountAdjustment -= 2;
+                            tempScalarCountAdjustment--;
+                        }
 
+                        int surrogatePairsCount = BitOperations.PopCount(highSurrogatesMask);
 
-                        mask &= 0x5555; // only preserve the even-numbered bits of the mask
+                        // 2 UTF-16 chars becomes 1 Unicode scalar
+                        tempScalarCountAdjustment -= surrogatePairsCount;
 
+                        // Since each surrogate code unit was >= 0x0800, we eagerly assumed
+                        // it'd be encoded as 3 UTF-8 code units. Each surrogate half is only
+                        // encoded as 2 UTF-8 code units (for 4 UTF-8 code units total),
+                        // so we'll adjust this now.
+                        tempUtf8CodeUnitCountAdjustment -= 2 * surrogatePairsCount;
                     }
 
-                    mask &= 0x5555; // only preserve the even-numbered bits
-
-                    int mask2 = Sse2.MoveMask(Sse2.ShiftRightLogical(utf16Data, 3).AsByte());
-                    mask2 &= mask;
-                    mask2 ^= mask;
-
-                    mask2 += mask2 << 2;
-
-                    if ((ushort)mask2 != mask)
-                    {
-                        break; // Bad surrogate pair found - fall out of vectorized loop
-                    }
-
-                    int numSurrogateCodeUnits = (int)Popcnt.PopCount((uint)mask);
-
-                    tempScalarCountAdjustment -= numSurrogateCodeUnits;
-                    tempUtf8CodeUnitCountAdjustment -= (uint)numSurrogateCodeUnits;
-
-                    // If the last char of the vector was a high surrogate, we can't consume
-                    // the entire 8-char vector. Instead, we back up one char so that we've
-                    // only consumed 7 chars, and the surrogate pair will be consumed + validated
-                    // on the next iteration.
-
-                    if (mask2 >= 0x10000)
-                    {
-                        tempUtf8CodeUnitCountAdjustment -= 2; // 2 => 0
-                        tempScalarCountAdjustment++; // 1 => 0
-                        pInputBuffer--;
-                        inputLength++;
-                    }
-
-                Continue:
                     pInputBuffer += 8;
                     inputLength -= 8;
                 } while (inputLength >= 8);
