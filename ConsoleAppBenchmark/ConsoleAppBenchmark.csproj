@@ -3,7 +3,7 @@
  <PropertyGroup>
    <OutputType>Exe</OutputType>
    <TargetFramework>netcoreapp3.0</TargetFramework>
-   <RuntimeFrameworkVersion>3.0.0-preview-27218-01</RuntimeFrameworkVersion>
+   <!--<RuntimeFrameworkVersion>3.0.0-preview4-27525-12</RuntimeFrameworkVersion>-->
    <!--<RuntimeFrameworkVersion>2.1.5</RuntimeFrameworkVersion>-->
    <NETCoreAppMaximumVersion>3.0</NETCoreAppMaximumVersion>
    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--<PackageReference Include="Microsoft.Private.CoreFx.NETCoreApp" Version="4.6.0-dev.19113.1" />-->
+    <PackageReference Include="Microsoft.Private.CoreFx.NETCoreApp" Version="4.6.0-dev.19177.1" />
   </ItemGroup>
 
 </Project>

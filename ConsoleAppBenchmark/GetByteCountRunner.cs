@@ -1,0 +1,700 @@
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+using System.Text;
+using BenchmarkDotNet.Attributes;
+
+using nuint = System.UInt64;
+using nint = System.Int64;
+using System.Numerics;
+
+namespace ConsoleAppBenchmark
+{
+    public class GetByteCountRunner
+    {
+        const int ITER_COUNT = 1_000;
+
+        [Params("11", "11-0", "25249-0", "30774-0", "39251-0")]
+        public string Filename;
+
+        private string _contents;
+
+        [GlobalSetup]
+        public void Setup()
+        {
+            _contents = File.ReadAllText(@"C:\Users\levib\source\repos\fast-utf8\FastUtf8Tester\SampleTexts\" + Filename + ".txt");
+        }
+
+        //[Benchmark(Baseline = true)]
+        //public int EncodingUtf8GetByteCount()
+        //{
+        //    int retVal = default;
+
+        //    ReadOnlySpan<char> theSpan = _contents;
+
+        //    for (int i = 0; i < ITER_COUNT; i++)
+        //    {
+        //        retVal = Encoding.UTF8.GetByteCount(theSpan);
+        //    }
+
+        //    return retVal;
+        //}
+
+        [Benchmark]
+        public int Vectorized()
+        {
+            int retVal = default;
+
+            ReadOnlySpan<char> theSpan = _contents;
+
+            for (int i = 0; i < ITER_COUNT; i++)
+            {
+                retVal = VectorizedGetByteCount(theSpan);
+            }
+
+            return retVal;
+        }
+
+        private static unsafe int VectorizedGetByteCount(ReadOnlySpan<char> contents)
+        {
+            fixed (char* pContents = &MemoryMarshal.GetReference(contents))
+            {
+                char* pFirstInvalidChar = GetPointerToFirstInvalidChar(pContents, contents.Length, out ulong utf8CodeUnitCountAdjustment, out _);
+
+                ulong temp = (ulong)(pFirstInvalidChar - pContents) + utf8CodeUnitCountAdjustment;
+                return checked((int)temp);
+            }
+        }
+
+        private static unsafe char* GetPointerToFirstInvalidChar(char* pInputBuffer, int inputLength, out ulong utf8CodeUnitCountAdjustment, out int scalarCountAdjustment)
+        {
+            int numCharsConsumedJustNow = (int)GetIndexOfFirstNonAsciiChar_Sse2(pInputBuffer, (uint)inputLength);
+
+            pInputBuffer += (uint)numCharsConsumedJustNow;
+
+            if (numCharsConsumedJustNow == inputLength)
+            {
+                utf8CodeUnitCountAdjustment = 0;
+                scalarCountAdjustment = 0;
+                return pInputBuffer;
+            }
+
+            inputLength -= numCharsConsumedJustNow;
+
+            ulong tempUtf8CodeUnitCountAdjustment = 0;
+            int tempScalarCountAdjustment = 0;
+
+            if (inputLength >= 8)
+            {
+                // The common case of all-ASCII should've been handled earlier by
+                // GetIndexOfFirstNonAsciiChar. If we got here, it means we saw some
+                // non-ASCII data, so from here on out we'll handle all non-surrogate
+                // UTF-16 code points branchlessly. We'll only branch if we see surrogates.
+
+                Vector128<ushort> pminuwStuffVec80 = Vector128.Create((ushort)0x80);
+                Vector128<ushort> pminuwStuffVec800 = Sse2.ShiftLeftLogical(pminuwStuffVec80, 4); // = 0x0800
+                Vector128<ushort> pAddSurr = Vector128.Create((ushort)0xA800);
+                Vector128<short> pSurrCmp800 = Vector128.Create(unchecked((short)0x8800));
+
+                do
+                {
+                    Vector128<ushort> utf16Data = Sse2.LoadVector128((ushort*)pInputBuffer);
+
+                    uint mask = (uint)Sse2.MoveMask(
+                        Sse2.Or(
+                            Sse2.ShiftLeftLogical(Sse41.Min(utf16Data, pminuwStuffVec80), 8),
+                            Sse2.ShiftRightLogical(Sse41.Min(utf16Data, pminuwStuffVec800), 4)).AsByte());
+
+                    // Each even bit of mask will be 1 only if the char was >= 0x0080,
+                    // and each odd bit of mask will be 1 only if the char was >= 0x0800.
+                    //
+                    // Example:
+                    //
+                    //            ,-- set if char[1] is >= 0x800
+                    //            |   ,-- set if char[0] is >= 0x800
+                    //            v   v
+                    // mask = ... 1 1 0 1
+                    //              ^   ^-- set if char[0] is non-ASCII
+                    //              `-- set if char[1] is non-ASCII
+                    //
+                    // This means we can popcnt the number of set bits, and it's the number
+                    // of *additional* UTF-8 bytes that each UTF-16 code unit requires as
+                    // it expands. We'll handle surrogates in just a moment.
+
+                    tempUtf8CodeUnitCountAdjustment += (uint)BitOperations.PopCount(mask);
+
+                    // Surrogates need to be special-cased for two reasons: (a) we need
+                    // to account for the fact that we over-counted in the addition above;
+                    // and (b) they require separate validation.
+
+                    utf16Data = Sse2.Add(utf16Data, pAddSurr);
+                    mask = (uint)Sse2.MoveMask(Sse2.CompareLessThan(utf16Data.AsInt16(), pSurrCmp800).AsByte());
+
+                    if (mask != 0)
+                    {
+                        // There's at least one UTF-16 surrogate code unit present.
+                        // Since we performed a pmovmskb operation on the result of a 16-bit pcmpgtw,
+                        // the resulting bits of 'mask' will occur in pairs:
+                        // - 00 if the corresponding UTF-16 char was not a surrogate code unit;
+                        // - 11 if the corresponding UTF-16 char was a surrogate code unit.
+                        //
+                        // A UTF-16 high/low surrogate code unit has the bit pattern [ 11011q## ######## ],
+                        // where # is any bit; q = 0 represents a high surrogate, and q = 1 represents
+                        // a low surrogate. Since we added 0xA800 in the vectorized operation above,
+                        // our surrogate pairs will now have the bit pattern [ 00011q## ######## ].
+                        // If we logical right-shift each word by 3, the 'q' bit will end up as the high
+                        // bit of the low byte of each word (and the high bit of the word will be cleared,
+                        // which means we can then immediately use pmovmskb to determine whether a given
+                        // char was a high or a low surrogate.
+                        //
+                        // Therefore the resulting bits of 'mask2' will occur in pairs:
+                        // - 00 if the corresponding UTF-16 char was a high surrogate code unit;
+                        // - 01 if the corresponding UTF-16 char was a low surrogate code unit;
+                        // - ## (garbage) if the corresponding UTF-16 char was not a surrogate code unit
+                        //   (we'll normalize ## to 00 through the AND immediately following).
+
+                        uint mask2 = (uint)Sse2.MoveMask(Sse2.ShiftRightLogical(utf16Data, 3).AsByte());
+
+                        mask2 &= mask; // clear any bits that weren't part of actual surrogate chars
+
+                        // Now we perform two checks. The first check is that 
+
+                        // Now we want to perform two checks: every high surrogate code unit is followed
+                        // by a low surrogate code unit; and every low surrogate code unit follows a
+                        // high surrogate code unit.
+
+                        if ((((mask2 >> 2) + mask2) & 0x0001_AAAAu) != 0)
+                        {
+
+                        }
+
+
+                        // 'mask2' will have 
+
+
+                        mask &= 0x5555; // only preserve the even-numbered bits of the mask
+
+                    }
+
+                    mask &= 0x5555; // only preserve the even-numbered bits
+
+                    int mask2 = Sse2.MoveMask(Sse2.ShiftRightLogical(utf16Data, 3).AsByte());
+                    mask2 &= mask;
+                    mask2 ^= mask;
+
+                    mask2 += mask2 << 2;
+
+                    if ((ushort)mask2 != mask)
+                    {
+                        break; // Bad surrogate pair found - fall out of vectorized loop
+                    }
+
+                    int numSurrogateCodeUnits = (int)Popcnt.PopCount((uint)mask);
+
+                    tempScalarCountAdjustment -= numSurrogateCodeUnits;
+                    tempUtf8CodeUnitCountAdjustment -= (uint)numSurrogateCodeUnits;
+
+                    // If the last char of the vector was a high surrogate, we can't consume
+                    // the entire 8-char vector. Instead, we back up one char so that we've
+                    // only consumed 7 chars, and the surrogate pair will be consumed + validated
+                    // on the next iteration.
+
+                    if (mask2 >= 0x10000)
+                    {
+                        tempUtf8CodeUnitCountAdjustment -= 2; // 2 => 0
+                        tempScalarCountAdjustment++; // 1 => 0
+                        pInputBuffer--;
+                        inputLength++;
+                    }
+
+                Continue:
+                    pInputBuffer += 8;
+                    inputLength -= 8;
+                } while (inputLength >= 8);
+            }
+
+            Debug.Assert(tempScalarCountAdjustment % 2 == 0);
+            tempScalarCountAdjustment >>= 2;
+
+            for (; inputLength > 0; pInputBuffer++, inputLength--)
+            {
+                uint thisChar = pInputBuffer[0];
+                if (thisChar <= 0x7F)
+                {
+                    continue;
+                }
+
+                tempUtf8CodeUnitCountAdjustment++; // Assume this requires 2 UTF-8 bytes to encode
+
+                if (thisChar <= 0x7FF)
+                {
+                    continue;
+                }
+
+                tempUtf8CodeUnitCountAdjustment++; // Assume this requires 3 UTF-8 bytes to encode
+
+                if (!IsSurrogateCodePoint(thisChar))
+                {
+                    continue;
+                }
+
+                tempUtf8CodeUnitCountAdjustment -= 2;
+
+                if (!IsHighSurrogateCodePoint(thisChar))
+                {
+                    goto Error;
+                }
+
+                if (inputLength == 1)
+                {
+                    goto Error;
+                }
+
+                if (!IsLowSurrogateCodePoint(pInputBuffer[1]))
+                {
+                    goto Error;
+                }
+
+                tempScalarCountAdjustment--;
+                tempUtf8CodeUnitCountAdjustment += 2;
+
+                pInputBuffer++;
+                inputLength--;
+            }
+
+        Error:
+
+            utf8CodeUnitCountAdjustment = tempUtf8CodeUnitCountAdjustment;
+            scalarCountAdjustment = tempScalarCountAdjustment;
+            return pInputBuffer;
+        }
+
+
+        /// <summary>
+        /// Returns <see langword="true"/> iff <paramref name="value"/> is a UTF-16 high surrogate code point,
+        /// i.e., is in [ U+D800..U+DBFF ], inclusive.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsHighSurrogateCodePoint(uint value) => IsInRangeInclusive(value, 0xD800U, 0xDBFFU);
+
+        /// <summary>
+        /// Returns <see langword="true"/> iff <paramref name="value"/> is between
+        /// <paramref name="lowerBound"/> and <paramref name="upperBound"/>, inclusive.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsInRangeInclusive(uint value, uint lowerBound, uint upperBound) => ((value - lowerBound) <= (upperBound - lowerBound));
+
+        /// <summary>
+        /// Returns <see langword="true"/> iff <paramref name="value"/> is a UTF-16 low surrogate code point,
+        /// i.e., is in [ U+DC00..U+DFFF ], inclusive.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsLowSurrogateCodePoint(uint value) => IsInRangeInclusive(value, 0xDC00U, 0xDFFFU);
+
+        /// <summary>
+        /// Returns <see langword="true"/> iff <paramref name="value"/> is a UTF-16 surrogate code point,
+        /// i.e., is in [ U+D800..U+DFFF ], inclusive.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsSurrogateCodePoint(uint value) => IsInRangeInclusive(value, 0xD800U, 0xDFFFU);
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        private static unsafe nuint GetIndexOfFirstNonAsciiChar_Sse2(char* pBuffer, nuint bufferLength /* in chars */)
+        {
+            // This method contains logic optimized for both SSE2 and SSE41. Much of the logic in this method
+            // will be elided by JIT once we determine which specific ISAs we support.
+
+            // Quick check for empty inputs.
+
+            if (bufferLength == 0)
+            {
+                return 0;
+            }
+
+            // JIT turns the below into constants
+
+            uint SizeOfVector128InBytes = (uint)Unsafe.SizeOf<Vector128<byte>>();
+            uint SizeOfVector128InChars = SizeOfVector128InBytes / sizeof(char);
+
+            Debug.Assert(Sse2.IsSupported, "Should've been checked by caller.");
+            Debug.Assert(BitConverter.IsLittleEndian, "SSE2 assumes little-endian.");
+
+            Vector128<short> firstVector, secondVector;
+            uint currentMask;
+            char* pOriginalBuffer = pBuffer;
+
+            if (bufferLength < SizeOfVector128InChars)
+            {
+                goto InputBufferLessThanOneVectorInLength; // can't vectorize; drain primitives instead
+            }
+
+            // This method is written such that control generally flows top-to-bottom, avoiding
+            // jumps as much as possible in the optimistic case of "all ASCII". If we see non-ASCII
+            // data, we jump out of the hot paths to targets at the end of the method.
+
+            Vector128<short> asciiMaskForPTEST = Vector128.Create(unchecked((short)0xFF80)); // used for PTEST on supported hardware
+            Vector128<ushort> asciiMaskForPMINUW = Vector128.Create((ushort)0x0080); // used for PMINUW on supported hardware
+            Vector128<short> asciiMaskForPXOR = Vector128.Create(unchecked((short)0x8000)); // used for PXOR
+            Vector128<short> asciiMaskForPCMPGTW = Vector128.Create(unchecked((short)0x807F)); // used for PCMPGTW
+
+            Debug.Assert(bufferLength <= nuint.MaxValue / sizeof(char));
+
+            // Read the first vector unaligned.
+
+            firstVector = Sse2.LoadVector128((short*)pBuffer); // unaligned load
+
+            if (Sse41.IsSupported)
+            {
+                // The SSE41-optimized code path works by forcing the 0x0080 bit in each WORD of the vector to be
+                // set iff the WORD element has value >= 0x0080 (non-ASCII). Then we'll treat it as a BYTE vector
+                // in order to extract the mask.
+                currentMask = (uint)Sse2.MoveMask(Sse41.Min(firstVector.AsUInt16(), asciiMaskForPMINUW).AsByte());
+            }
+            else
+            {
+                // The SSE2-optimized code path works by forcing each WORD of the vector to be 0xFFFF iff the WORD
+                // element has value >= 0x0080 (non-ASCII). Then we'll treat it as a BYTE vector in order to extract
+                // the mask.
+                currentMask = (uint)Sse2.MoveMask(Sse2.CompareGreaterThan(Sse2.Xor(firstVector, asciiMaskForPXOR), asciiMaskForPCMPGTW).AsByte());
+            }
+
+            if (currentMask != 0)
+            {
+                goto FoundNonAsciiDataInCurrentMask;
+            }
+
+            // If we have less than 32 bytes to process, just go straight to the final unaligned
+            // read. There's no need to mess with the loop logic in the middle of this method.
+
+            // Adjust the remaining length to account for what we just read.
+            // For the remainder of this code path, bufferLength will be in bytes, not chars.
+
+            bufferLength <<= 1; // chars to bytes
+
+            if (bufferLength < 2 * SizeOfVector128InBytes)
+            {
+                goto IncrementCurrentOffsetBeforeFinalUnalignedVectorRead;
+            }
+
+            // Now adjust the read pointer so that future reads are aligned.
+
+            pBuffer = (char*)(((nuint)pBuffer + SizeOfVector128InBytes) & ~(nuint)(SizeOfVector128InBytes - 1));
+
+#if DEBUG
+            long numCharsRead = pBuffer - pOriginalBuffer;
+            Debug.Assert(0 < numCharsRead && numCharsRead <= SizeOfVector128InChars, "We should've made forward progress of at least one char.");
+            Debug.Assert((nuint)numCharsRead <= bufferLength, "We shouldn't have read past the end of the input buffer.");
+#endif
+
+            // Adjust remaining buffer length.
+
+            bufferLength += (nuint)pOriginalBuffer;
+            bufferLength -= (nuint)pBuffer;
+
+            // The buffer is now properly aligned.
+            // Read 2 vectors at a time if possible.
+
+            if (bufferLength >= 2 * SizeOfVector128InBytes)
+            {
+                char* pFinalVectorReadPos = (char*)((nuint)pBuffer + bufferLength - 2 * SizeOfVector128InBytes);
+
+                // After this point, we no longer need to update the bufferLength value.
+
+                do
+                {
+                    firstVector = Sse2.LoadAlignedVector128((short*)pBuffer);
+                    secondVector = Sse2.LoadAlignedVector128((short*)pBuffer + SizeOfVector128InChars);
+                    Vector128<short> combinedVector = Sse2.Or(firstVector, secondVector);
+
+                    if (Sse41.IsSupported)
+                    {
+                        // If a non-ASCII bit is set in any WORD of the combined vector, we have seen non-ASCII data.
+                        // Jump to the non-ASCII handler to figure out which particular vector contained non-ASCII data.
+                        if (!Sse41.TestZ(combinedVector, asciiMaskForPTEST))
+                        {
+                            goto FoundNonAsciiDataInFirstOrSecondVector;
+                        }
+                    }
+                    else
+                    {
+                        // See comment earlier in the method for an explanation of how the below logic works.
+                        if (Sse2.MoveMask(Sse2.CompareGreaterThan(Sse2.Xor(combinedVector, asciiMaskForPXOR), asciiMaskForPCMPGTW).AsByte()) != 0)
+                        {
+                            goto FoundNonAsciiDataInFirstOrSecondVector;
+                        }
+                    }
+
+                    pBuffer += 2 * SizeOfVector128InChars;
+                } while (pBuffer <= pFinalVectorReadPos);
+            }
+
+            // We have somewhere between 0 and (2 * vector length) - 1 bytes remaining to read from.
+            // Since the above loop doesn't update bufferLength, we can't rely on its absolute value.
+            // But we _can_ rely on it to tell us how much remaining data must be drained by looking
+            // at what bits of it are set. This works because had we updated it within the loop above,
+            // we would've been adding 2 * SizeOfVector128 on each iteration, but we only care about
+            // bits which are less significant than those that the addition would've acted on.
+
+            // If there is fewer than one vector length remaining, skip the next aligned read.
+            // Remember, at this point bufferLength is measured in bytes, not chars.
+
+            if ((bufferLength & SizeOfVector128InBytes) == 0)
+            {
+                goto DoFinalUnalignedVectorRead;
+            }
+
+            // At least one full vector's worth of data remains, so we can safely read it.
+            // Remember, at this point pBuffer is still aligned.
+
+            firstVector = Sse2.LoadAlignedVector128((short*)pBuffer);
+
+            if (Sse41.IsSupported)
+            {
+                // If a non-ASCII bit is set in any WORD of the combined vector, we have seen non-ASCII data.
+                // Jump to the non-ASCII handler to figure out which particular vector contained non-ASCII data.
+                if (!Sse41.TestZ(firstVector, asciiMaskForPTEST))
+                {
+                    goto FoundNonAsciiDataInFirstVector;
+                }
+            }
+            else
+            {
+                // See comment earlier in the method for an explanation of how the below logic works.
+                currentMask = (uint)Sse2.MoveMask(Sse2.CompareGreaterThan(Sse2.Xor(firstVector, asciiMaskForPXOR), asciiMaskForPCMPGTW).AsByte());
+                if (currentMask != 0)
+                {
+                    goto FoundNonAsciiDataInCurrentMask;
+                }
+            }
+
+        IncrementCurrentOffsetBeforeFinalUnalignedVectorRead:
+
+            pBuffer += SizeOfVector128InChars;
+
+        DoFinalUnalignedVectorRead:
+
+            if (((byte)bufferLength & (SizeOfVector128InBytes - 1)) != 0)
+            {
+                // Perform an unaligned read of the last vector.
+                // We need to adjust the pointer because we're re-reading data.
+
+                pBuffer = (char*)((byte*)pBuffer + (bufferLength & (SizeOfVector128InBytes - 1)) - SizeOfVector128InBytes);
+                firstVector = Sse2.LoadVector128((short*)pBuffer); // unaligned load
+
+                if (Sse41.IsSupported)
+                {
+                    // If a non-ASCII bit is set in any WORD of the combined vector, we have seen non-ASCII data.
+                    // Jump to the non-ASCII handler to figure out which particular vector contained non-ASCII data.
+                    if (!Sse41.TestZ(firstVector, asciiMaskForPTEST))
+                    {
+                        goto FoundNonAsciiDataInFirstVector;
+                    }
+                }
+                else
+                {
+                    // See comment earlier in the method for an explanation of how the below logic works.
+                    currentMask = (uint)Sse2.MoveMask(Sse2.CompareGreaterThan(Sse2.Xor(firstVector, asciiMaskForPXOR), asciiMaskForPCMPGTW).AsByte());
+                    if (currentMask != 0)
+                    {
+                        goto FoundNonAsciiDataInCurrentMask;
+                    }
+                }
+
+                pBuffer += SizeOfVector128InChars;
+            }
+
+        Finish:
+
+            Debug.Assert(((nuint)pBuffer - (nuint)pOriginalBuffer) % 2 == 0, "Shouldn't have incremented any pointer by an odd byte count.");
+            return ((nuint)pBuffer - (nuint)pOriginalBuffer) / sizeof(char); // and we're done! (remember to adjust for char count)
+
+        FoundNonAsciiDataInFirstOrSecondVector:
+
+            // We don't know if the first or the second vector contains non-ASCII data. Check the first
+            // vector, and if that's all-ASCII then the second vector must be the culprit. Either way
+            // we'll make sure the first vector local is the one that contains the non-ASCII data.
+
+            // See comment earlier in the method for an explanation of how the below logic works.
+            if (Sse41.IsSupported)
+            {
+                if (!Sse41.TestZ(firstVector, asciiMaskForPTEST))
+                {
+                    goto FoundNonAsciiDataInFirstVector;
+                }
+            }
+            else
+            {
+                currentMask = (uint)Sse2.MoveMask(Sse2.CompareGreaterThan(Sse2.Xor(firstVector, asciiMaskForPXOR), asciiMaskForPCMPGTW).AsByte());
+                if (currentMask != 0)
+                {
+                    goto FoundNonAsciiDataInCurrentMask;
+                }
+            }
+
+            // Wasn't the first vector; must be the second.
+
+            pBuffer += SizeOfVector128InChars;
+            firstVector = secondVector;
+
+        FoundNonAsciiDataInFirstVector:
+
+            // See comment earlier in the method for an explanation of how the below logic works.
+            if (Sse41.IsSupported)
+            {
+                currentMask = (uint)Sse2.MoveMask(Sse41.Min(firstVector.AsUInt16(), asciiMaskForPMINUW).AsByte());
+            }
+            else
+            {
+                currentMask = (uint)Sse2.MoveMask(Sse2.CompareGreaterThan(Sse2.Xor(firstVector, asciiMaskForPXOR), asciiMaskForPCMPGTW).AsByte());
+            }
+
+        FoundNonAsciiDataInCurrentMask:
+
+            // The mask contains - from the LSB - a 0 for each ASCII byte we saw, and a 1 for each non-ASCII byte.
+            // Tzcnt is the correct operation to count the number of zero bits quickly. If this instruction isn't
+            // available, we'll fall back to a normal loop. (Even though the original vector used WORD elements,
+            // masks work on BYTE elements, and we account for this in the final fixup.)
+
+            Debug.Assert(currentMask != 0, "Shouldn't be here unless we see non-ASCII data.");
+            pBuffer = (char*)((byte*)pBuffer + (uint)BitOperations.TrailingZeroCount(currentMask));
+
+            goto Finish;
+
+        FoundNonAsciiDataInCurrentDWord:
+
+            uint currentDWord;
+            Debug.Assert(!AllCharsInUInt32AreAscii(currentDWord), "Shouldn't be here unless we see non-ASCII data.");
+
+            if (FirstCharInUInt32IsAscii(currentDWord))
+            {
+                pBuffer++; // skip past the ASCII char
+            }
+
+            goto Finish;
+
+        InputBufferLessThanOneVectorInLength:
+
+            // These code paths get hit if the original input length was less than one vector in size.
+            // We can't perform vectorized reads at this point, so we'll fall back to reading primitives
+            // directly. Note that all of these reads are unaligned.
+
+            // Reminder: If this code path is hit, bufferLength is still a char count, not a byte count.
+            // We skipped the code path that multiplied the count by sizeof(char).
+
+            Debug.Assert(bufferLength < SizeOfVector128InChars);
+
+            // QWORD drain
+
+            if ((bufferLength & 4) != 0)
+            {
+                if (Bmi1.X64.IsSupported)
+                {
+                    // If we can use 64-bit tzcnt to count the number of leading ASCII chars, prefer it.
+
+                    ulong candidateUInt64 = Unsafe.ReadUnaligned<ulong>(pBuffer);
+                    if (!AllCharsInUInt64AreAscii(candidateUInt64))
+                    {
+                        // Clear the low 7 bits (the ASCII bits) of each char, then tzcnt.
+                        // Remember the / 8 at the end to convert bit count to byte count,
+                        // then the & ~1 at the end to treat a match in the high byte of
+                        // any char the same as a match in the low byte of that same char.
+
+                        candidateUInt64 &= 0xFF80FF80_FF80FF80ul;
+                        pBuffer = (char*)((byte*)pBuffer + ((nuint)(Bmi1.X64.TrailingZeroCount(candidateUInt64) / 8) & ~(nuint)1));
+                        goto Finish;
+                    }
+                }
+                else
+                {
+                    // If we can't use 64-bit tzcnt, no worries. We'll just do 2x 32-bit reads instead.
+
+                    currentDWord = Unsafe.ReadUnaligned<uint>(pBuffer);
+                    uint nextDWord = Unsafe.ReadUnaligned<uint>(pBuffer + 4 / sizeof(char));
+
+                    if (!AllCharsInUInt32AreAscii(currentDWord | nextDWord))
+                    {
+                        // At least one of the values wasn't all-ASCII.
+                        // We need to figure out which one it was and stick it in the currentMask local.
+
+                        if (AllCharsInUInt32AreAscii(currentDWord))
+                        {
+                            currentDWord = nextDWord; // this one is the culprit
+                            pBuffer += 4 / sizeof(char);
+                        }
+
+                        goto FoundNonAsciiDataInCurrentDWord;
+                    }
+                }
+
+                pBuffer += 4; // successfully consumed 4 ASCII chars
+            }
+
+            // DWORD drain
+
+            if ((bufferLength & 2) != 0)
+            {
+                currentDWord = Unsafe.ReadUnaligned<uint>(pBuffer);
+
+                if (!AllCharsInUInt32AreAscii(currentDWord))
+                {
+                    goto FoundNonAsciiDataInCurrentDWord;
+                }
+
+                pBuffer += 2; // successfully consumed 2 ASCII chars
+            }
+
+            // WORD drain
+            // This is the final drain; there's no need for a BYTE drain since our elemental type is 16-bit char.
+
+            if ((bufferLength & 1) != 0)
+            {
+                if (*pBuffer <= 0x007F)
+                {
+                    pBuffer++; // successfully consumed a single char
+                }
+            }
+
+            goto Finish;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool AllBytesInUInt64AreAscii(ulong value)
+        {
+            return ((value & 0x80808080_80808080ul) == 0);
+        }
+
+        /// <summary>
+        /// Returns <see langword="true"/> iff all chars in <paramref name="value"/> are ASCII.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool AllCharsInUInt32AreAscii(uint value)
+        {
+            return ((value & ~0x007F007Fu) == 0);
+        }
+
+        /// <summary>
+        /// Returns <see langword="true"/> iff all chars in <paramref name="value"/> are ASCII.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool AllCharsInUInt64AreAscii(ulong value)
+        {
+            return ((value & ~0x007F007F_007F007Ful) == 0);
+        }
+
+        /// <summary>
+        /// Given a DWORD which represents two packed chars in machine-endian order,
+        /// <see langword="true"/> iff the first char (in machine-endian order) is ASCII.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private static bool FirstCharInUInt32IsAscii(uint value)
+        {
+            return (BitConverter.IsLittleEndian && (value & 0xFF80u) == 0)
+                || (!BitConverter.IsLittleEndian && (value & 0xFF800000u) == 0);
+        }
+    }
+}

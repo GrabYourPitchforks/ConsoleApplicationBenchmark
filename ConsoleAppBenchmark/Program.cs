@@ -19,25 +19,25 @@ namespace ConsoleAppBenchmark
         {
             public LocalCoreClrConfig()
             {
-                //AddCustom30Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\30-master",
-                //    displayName: "3.0-master",
-                //    isBaseline: true);
+                AddCustom30Toolchain(
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\30-master",
+                    displayName: "3.0-master",
+                    isBaseline: false);
 
                 //AddCustom30Toolchain(
                 //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode",
                 //    displayName: "proposal",
                 //    isBaseline: false);
 
-                AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode2",
-                    displayName: "hashcode2",
-                    isBaseline: true);
+                //AddCustom30Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode2",
+                //    displayName: "hashcode2",
+                //    isBaseline: true);
 
-                AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode3",
-                    displayName: "hashcode3",
-                    isBaseline: false);
+                //AddCustom30Toolchain(
+                //  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode4",
+                //  displayName: "hashcode4",
+                //  isBaseline: false);
 
                 //AddCustom30Toolchain(
                 //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_test_no_hi",
@@ -95,7 +95,8 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>();
             // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
-            var summary = BenchmarkRunner.Run<HashRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<HashRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<GetByteCountRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<MemoryRunner>(new LocalCoreClrConfig());
 
             //var runner = new JsonRunner();
