@@ -25,8 +25,13 @@ namespace ConsoleAppBenchmark
                     isBaseline: true);
 
                 AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\invariantarray",
-                    displayName: "invariantarray",
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\spanslice2",
+                    displayName: "slice_mod",
+                    isBaseline: false);
+
+                AddCustom30Toolchain(
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\spanslice",
+                    displayName: "slice_fullopt",
                     isBaseline: false);
 
                 //AddCustom30Toolchain(
@@ -63,6 +68,10 @@ namespace ConsoleAppBenchmark
                     }
                 }
 
+                // job = job.With(new[] { new EnvironmentVariable("COMPLUS_TieredCompilation", "0") });
+
+                // job = job.WithWarmupCount(30);
+
                 Add(job);
             }
 
@@ -80,14 +89,14 @@ namespace ConsoleAppBenchmark
 
         static void Main(string[] args)
         {
-            // var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>();
             // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<HashRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<GetByteCountRunner>(new LocalCoreClrConfig());
-            var summary = BenchmarkRunner.Run<ListRunner>(new LocalCoreClrConfig());
+            //var summary = BenchmarkRunner.Run<ListRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<MemoryRunner>(new LocalCoreClrConfig());
 
             //var runner = new JsonRunner();

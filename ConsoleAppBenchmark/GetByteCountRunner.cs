@@ -69,31 +69,33 @@ namespace ConsoleAppBenchmark
                 return checked((int)temp);
             }
         }
-
+        
         private static unsafe char* GetPointerToFirstInvalidChar(char* pInputBuffer, int inputLength, out long utf8CodeUnitCountAdjustment, out int scalarCountAdjustment)
         {
-            int numCharsConsumedJustNow = (int)GetIndexOfFirstNonAsciiChar_Sse2(pInputBuffer, (uint)inputLength);
+            // First, we'll handle the common case of all-ASCII. If this is able to
+            // consume the entire buffer, we'll skip the remainder of this method's logic.
 
-            pInputBuffer += (uint)numCharsConsumedJustNow;
-
-            if (numCharsConsumedJustNow == inputLength)
+            int numAsciiCharsConsumedJustNow = (int)GetIndexOfFirstNonAsciiChar_Sse2(pInputBuffer, (uint)inputLength);
+            pInputBuffer += (uint)numAsciiCharsConsumedJustNow;
+            if (numAsciiCharsConsumedJustNow == inputLength)
             {
                 utf8CodeUnitCountAdjustment = 0;
                 scalarCountAdjustment = 0;
                 return pInputBuffer;
             }
 
-            // Should be a tail-call
-            return GetPointerToFirstInvalidCharCore(pInputBuffer, inputLength - numCharsConsumedJustNow, out utf8CodeUnitCountAdjustment, out scalarCountAdjustment);
-        }
-
-        private static unsafe char* GetPointerToFirstInvalidCharCore(char* pInputBuffer, int inputLength, out long utf8CodeUnitCountAdjustment, out int scalarCountAdjustment)
-        {
-            // The common case of all-ASCII should've been handled earlier by
-            // GetIndexOfFirstNonAsciiChar. If we got here, it means we saw some
-            // non-ASCII data, so within our vectorized code paths below we'll
-            // handle all non-surrogate UTF-16 code points branchlessly. We'll only
-            // branch if we see surrogates.
+            // If we got here, it means we saw some non-ASCII data, so within our
+            // vectorized code paths below we'll handle all non-surrogate UTF-16
+            // code points branchlessly. We'll only branch if we see surrogates.
+            // 
+            // We still optimistically assume the data is mostly ASCII. This means that the
+            // number of UTF-8 code units and the number of scalars almost matches the number
+            // of UTF-16 code units. As we go through the input and find non-ASCII
+            // characters, we'll keep track of these "adjustment" fixups. To get the
+            // total number of UTF-8 code units required to encode the input data, add
+            // the UTF-8 code unit count adjustment to the number of UTF-16 code units
+            // seen.  To get the total number of scalars present in the input data,
+            // add the scalar count adjustment to the number of UTF-16 code units seen.
 
             long tempUtf8CodeUnitCountAdjustment = 0;
             int tempScalarCountAdjustment = 0;
@@ -339,31 +341,29 @@ namespace ConsoleAppBenchmark
                     continue;
                 }
 
+                // Bump adjustment by +1 for U+0080..U+07FF; by +2 for U+0800..U+FFFF.
+                // This optimistically assumes no surrogates, which we'll handle shortly.
 
-
-                tempUtf8CodeUnitCountAdjustment++; // Assume this requires 2 UTF-8 bytes to encode
-
-                if (thisChar <= 0x7FF)
-                {
-                    continue;
-                }
-
-                tempUtf8CodeUnitCountAdjustment++; // Assume this requires 3 UTF-8 bytes to encode
+                tempUtf8CodeUnitCountAdjustment += (thisChar + 0x0001_F800u) >> 16;
 
                 if (!IsSurrogateCodePoint(thisChar))
                 {
                     continue;
                 }
 
+                // Found a surrogate char. Back out the adjustment we made above, then
+                // try to consume the entire surrogate pair all at once. We won't bother
+                // trying to interpret the surrogate pair as a scalar value; we'll only
+                // validate that its bit pattern matches what's expected for a surrogate pair.
+
                 tempUtf8CodeUnitCountAdjustment -= 2;
 
                 if (inputLength == 1)
                 {
-                    goto Error;
+                    goto Error; // input buffer too small to read a surrogate pair
                 }
 
                 thisChar = Unsafe.ReadUnaligned<uint>(pInputBuffer);
-
                 if (((thisChar - (BitConverter.IsLittleEndian ? 0xDC00_D800u : 0xD800_DC00u)) & 0xFC00_FC00u) != 0)
                 {
                     goto Error; // not a well-formed surrogate pair

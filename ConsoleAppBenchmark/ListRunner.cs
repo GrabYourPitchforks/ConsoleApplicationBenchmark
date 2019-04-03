@@ -24,23 +24,23 @@ namespace ConsoleAppBenchmark
             _prePopListInt = new List<int>(Enumerable.Repeat(1234, ITER_COUNT));
         }
 
+        //[Benchmark]
+        //public int AddObjToListOfObj()
+        //{
+        //    object obj = _obj;
+        //    List<object> list = _listObj;
+        //    list.Clear();
+
+        //    for (int i = 0; i < ITER_COUNT; i++)
+        //    {
+        //        list.Add(obj);
+        //    }
+
+        //    return list.Count;
+        //}
+
         [Benchmark]
-        public int AddObjToObjList()
-        {
-            object obj = _obj;
-            List<object> list = _listObj;
-            list.Clear();
-
-            for (int i = 0; i < ITER_COUNT; i++)
-            {
-                list.Add(obj);
-            }
-
-            return list.Count;
-        }
-
-        [Benchmark]
-        public int AddStringToObjList()
+        public int AddStringToListOfObj()
         {
             object obj = _str;
             List<object> list = _listObj;
@@ -54,35 +54,35 @@ namespace ConsoleAppBenchmark
             return list.Count;
         }
 
-        [Benchmark]
-        public int AddIntToIntList()
-        {
-            int obj = _int;
-            List<int> list = _listInt;
-            list.Clear();
+        //[Benchmark]
+        //public int AddIntToIntList()
+        //{
+        //    int obj = _int;
+        //    List<int> list = _listInt;
+        //    list.Clear();
 
-            for (int i = 0; i < ITER_COUNT; i++)
-            {
-                list.Add(obj);
-            }
+        //    for (int i = 0; i < ITER_COUNT; i++)
+        //    {
+        //        list.Add(obj);
+        //    }
 
-            return list.Count;
-        }
+        //    return list.Count;
+        //}
 
-        [Benchmark]
-        public int SumInts()
-        {
-            List<int> list = _prePopListInt;
-            list.GetType(); // null check
+        //[Benchmark]
+        //public int SumIntsFromList()
+        //{
+        //    List<int> list = _prePopListInt;
+        //    list.GetType(); // null check
 
-            int retVal = default;
+        //    int retVal = default;
 
-            for (int i = 0; i < list.Count; i++)
-            {
-                retVal += list[i];
-            }
+        //    for (int i = 0; i < list.Count; i++)
+        //    {
+        //        retVal += list[i];
+        //    }
 
-            return retVal;
-        }
+        //    return retVal;
+        //}
     }
 }
