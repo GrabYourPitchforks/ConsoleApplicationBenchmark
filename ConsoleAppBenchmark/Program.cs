@@ -19,20 +19,30 @@ namespace ConsoleAppBenchmark
         {
             public LocalCoreClrConfig()
             {
+                //AddCustom30Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\30-master",
+                //    displayName: "3.0-master",
+                //    isBaseline: true);
+
+                //AddCustom30Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\memslice",
+                //    displayName: "memslice",
+                //    isBaseline: false);
+
                 AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\30-master",
-                    displayName: "3.0-master",
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_1",
+                    displayName: "utf8_1",
                     isBaseline: true);
 
-                AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\spanslice2",
-                    displayName: "slice_mod",
-                    isBaseline: false);
+                //AddCustom30Toolchain(
+                //  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_2",
+                //  displayName: "utf8_2",
+                //  isBaseline: false);
 
                 AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\spanslice",
-                    displayName: "slice_fullopt",
-                    isBaseline: false);
+                 coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_3",
+                 displayName: "utf8_3",
+                 isBaseline: false);
 
                 //AddCustom30Toolchain(
                 //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_test_no_hi",
@@ -70,7 +80,7 @@ namespace ConsoleAppBenchmark
 
                 // job = job.With(new[] { new EnvironmentVariable("COMPLUS_TieredCompilation", "0") });
 
-                // job = job.WithWarmupCount(30);
+                job = job.WithWarmupCount(10);
 
                 Add(job);
             }
@@ -89,7 +99,8 @@ namespace ConsoleAppBenchmark
 
         static void Main(string[] args)
         {
-            var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>();
@@ -143,141 +154,4 @@ namespace ConsoleAppBenchmark
         //    return retVal;
         //}
     }
-
-    //public class Runner
-    //{
-    //    private const string SampleTextsFolder = @"C:\Users\levib\source\repos\fast-utf8\FastUtf8Tester\SampleTexts\";
-
-    //    private const int ITER_COUNT = 100;
-    //    private byte[] _utf8Data;
-    //    private string _utf16Data;
-
-    //    //[Params("11.txt", "11-0.txt", "25249-0.txt", "30774-0.txt", "39251-0.txt")]
-    //    [Params( "30774-0.txt", "39251-0.txt")]
-    //    public string Corpus;
-
-    //    //[Benchmark(Baseline = true)]
-    //    //public int GetCharCount_Old()
-    //    //{
-    //    //    byte[] utf8Data = _utf8Data;
-    //    //    var unused = utf8Data.Length;
-
-    //    //    int retVal = 0;
-    //    //    for (int i = 0; i < ITER_COUNT; i++)
-    //    //    {
-    //    //        retVal = Encoding.UTF8.GetCharCount(utf8Data);
-    //    //    }
-
-    //    //    return retVal;
-    //    //}
-
-    //    //[Benchmark]
-    //    //public int GetCharCount_New()
-    //    //{
-    //    //    byte[] utf8Data = _utf8Data;
-    //    //    var unused = utf8Data.Length;
-
-    //    //    int retVal = 0;
-    //    //    for (int i = 0; i < ITER_COUNT; i++)
-    //    //    {
-    //    //        Utf8.GetIndexOfFirstInvalidByte(utf8Data, out retVal, out _);
-    //    //    }
-
-    //    //    return retVal;
-    //    //}
-
-    //    [Benchmark(Baseline = true, Description = "GetBytes (old)")]
-    //    public int ToBytes_Old()
-    //    {
-    //        string utf16Data = _utf16Data;
-    //        var utf16Length = utf16Data.Length;
-
-    //        byte[] utf8Data = ArrayPool<byte>.Shared.Rent(utf16Length * 3);
-    //        _ = utf8Data.Length;
-
-    //        int byteCount = 0;
-    //        for (int i = 0; i < ITER_COUNT; i++)
-    //        {
-    //            byteCount = Encoding.UTF8.GetBytes(utf16Data, utf8Data);
-    //        }
-
-    //        ArrayPool<byte>.Shared.Return(utf8Data);
-
-    //        return byteCount;
-    //    }
-
-    //    [Benchmark(Description = "GetBytes (new)")]
-    //    public int ToBytes_New()
-    //    {
-    //        string utf16Data = _utf16Data;
-    //        var utf16Length = utf16Data.Length;
-
-    //        byte[] utf8Data = ArrayPool<byte>.Shared.Rent(utf16Length * 3);
-    //        _ = utf8Data.Length;
-
-    //        int byteCount = 0;
-    //        for (int i = 0; i < ITER_COUNT; i++)
-    //        {
-    //            Utf8.ToBytes(utf16Data, utf8Data, false, false, out _, out byteCount);
-    //        }
-
-    //        ArrayPool<byte>.Shared.Return(utf8Data);
-
-    //        return byteCount;
-    //    }
-
-    //    //[Benchmark(Baseline = true, Description = "GetChars (old)")]
-    //    //public int ToChars_Old()
-    //    //{
-    //    //    byte[] utf8Data = _utf8Data;
-    //    //    var utf8Length = utf8Data.Length;
-
-    //    //    char[] utf16Data = ArrayPool<char>.Shared.Rent(utf8Length );
-    //    //    _ = utf16Data.Length;
-
-    //    //    int charCount = 0;
-    //    //    for (int i = 0; i < ITER_COUNT; i++)
-    //    //    {
-    //    //        charCount = Encoding.UTF8.GetChars(utf8Data, utf16Data);
-    //    //    }
-
-    //    //    ArrayPool<char>.Shared.Return(utf16Data);
-
-    //    //    return charCount;
-    //    //}
-
-    //    //[Benchmark(Description = "GetChars (new)")]
-    //    //public int ToChars_New()
-    //    //{
-    //    //    byte[] utf8Data = _utf8Data;
-    //    //    var utf8Length = utf8Data.Length;
-
-    //    //    char[] utf16Data = ArrayPool<char>.Shared.Rent(utf8Length );
-    //    //    _ = utf16Data.Length;
-
-    //    //    int charCount = 0;
-    //    //    for (int i = 0; i < ITER_COUNT; i++)
-    //    //    {
-    //    //        Utf8.ToChars(utf8Data, utf16Data, false, false, out _, out charCount);
-    //    //    }
-
-    //    //    ArrayPool<char>.Shared.Return(utf16Data);
-
-    //    //    return charCount;
-    //    //}
-
-    //    [GlobalSetup]
-    //    public void Setup()
-    //    {
-    //        _utf8Data = File.ReadAllBytes(SampleTextsFolder + @"\" + Corpus);
-
-    //        // strip off UTF-8 BOM if it exists
-    //        if (_utf8Data.Length > 3 && _utf8Data.AsSpan(0, 3).SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF }))
-    //        {
-    //            _utf8Data = _utf8Data.AsSpan(3).ToArray();
-    //        }
-
-    //        _utf16Data = Encoding.UTF8.GetString(_utf8Data);
-    //    }
-    //}
 }

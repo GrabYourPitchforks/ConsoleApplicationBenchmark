@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using BenchmarkDotNet.Attributes;
 
@@ -25,17 +26,17 @@ namespace ConsoleAppBenchmark
             return DoTest(_romBytesFromArray);
         }
 
-        [Benchmark]
-        public int GetSpan_MemOfBytesFromMemMgr()
-        {
-            return DoTest(_romBytesFromMM);
-        }
+        //[Benchmark]
+        //public int GetSpan_MemOfBytesFromMemMgr()
+        //{
+        //    return DoTest(_romBytesFromMM);
+        //}
 
-        [Benchmark]
-        public int GetSpan_MemOfBytesEmpty()
-        {
-            return DoTest(_romBytesEmpty);
-        }
+        //[Benchmark]
+        //public int GetSpan_MemOfBytesEmpty()
+        //{
+        //    return DoTest(_romBytesEmpty);
+        //}
 
         //[Benchmark]
         //public int GetSpan_MemOfCharsFromArray()
@@ -62,24 +63,22 @@ namespace ConsoleAppBenchmark
         //}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T DoTest<T>(in ReadOnlyMemory<T> rom) => DoTest<T>(in rom, out _);
-
-        public static T DoTest<T>(in ReadOnlyMemory<T> rom, out int unused)
+        public static int DoTest<T>(in ReadOnlyMemory<T> rom)
         {
-            int totalLength = default;
-            T retVal = default;
-            for (int i = 0; i < NUM_ITERS; i++)
+            int result = default;
+
+            for (int i = NUM_ITERS; i > 0; i--)
             {
                 var span = rom.Span;
-                totalLength += span.Length;
+                result += span.Length;
 
                 if (!span.IsEmpty)
                 {
-                    retVal = span[0];
+                    result += Unsafe.As<T, int>(ref MemoryMarshal.GetReference(span));
                 }
             }
-            unused = totalLength;
-            return retVal;
+
+            return result;
         }
 
         private sealed class MyMemoryManager<T> : MemoryManager<T>
@@ -88,6 +87,7 @@ namespace ConsoleAppBenchmark
 
             public override Span<T> GetSpan()
             {
+                _ = _arr.Length;
                 return _arr;
             }
 
