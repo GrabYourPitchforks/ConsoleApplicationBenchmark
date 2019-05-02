@@ -19,30 +19,30 @@ namespace ConsoleAppBenchmark
         {
             public LocalCoreClrConfig()
             {
-                //AddCustom30Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\30-master",
-                //    displayName: "3.0-master",
-                //    isBaseline: true);
+                AddCustom30Toolchain(
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\30-master",
+                    displayName: "3.0-master",
+                    isBaseline: false);
 
                 //AddCustom30Toolchain(
                 //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\memslice",
                 //    displayName: "memslice",
                 //    isBaseline: false);
 
-                AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_1",
-                    displayName: "utf8_1",
-                    isBaseline: true);
+                //AddCustom30Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_1",
+                //    displayName: "utf8_1",
+                //    isBaseline: true);
 
                 //AddCustom30Toolchain(
                 //  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_2",
                 //  displayName: "utf8_2",
                 //  isBaseline: false);
 
-                AddCustom30Toolchain(
-                 coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_3",
-                 displayName: "utf8_3",
-                 isBaseline: false);
+                //AddCustom30Toolchain(
+                // coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_3",
+                // displayName: "utf8_3",
+                // isBaseline: false);
 
                 //AddCustom30Toolchain(
                 //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_test_no_hi",
@@ -99,7 +99,8 @@ namespace ConsoleAppBenchmark
 
         static void Main(string[] args)
         {
-            var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
+            //var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
