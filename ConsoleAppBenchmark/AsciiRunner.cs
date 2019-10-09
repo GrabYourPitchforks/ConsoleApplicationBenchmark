@@ -4,6 +4,8 @@ using System.Text;
 using System.Linq;
 using BenchmarkDotNet.Attributes;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Diagnostics;
 
 namespace ConsoleAppBenchmark
 {
@@ -17,19 +19,37 @@ namespace ConsoleAppBenchmark
         private Encoder _encoder;
         private readonly ASCIIEncoding _asciiEncodingErrorFallback = (ASCIIEncoding)Encoding.GetEncoding("us-ascii", EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
 
+        private byte[][] _bytesOfBytesAllAscii;
+
         // [Params(0, 1, 2, 3, 4, 8, 12, 16, 32, 64, 128)]
         // [Params(0, 4, 14, 29)]
-        [Params(256)]
-        public int StringLength;
+        // [Params(256)]
+        // public int StringLength;
+
+        [Params("1 - 6", "6 - 16", "12 - 24", "20 - 48", "32 - 256")]
+        public string StringLength;
 
         [GlobalSetup]
         public void Setup()
         {
-            _strAllAscii = new string('x', StringLength);
-            _bytesAllAscii = Enumerable.Repeat((byte)'x', StringLength).ToArray();
+            //_strAllAscii = new string('x', StringLength);
+            //_bytesAllAscii = Enumerable.Repeat((byte)'x', StringLength).ToArray();
 
-            _strWithNonAsciiData = _strAllAscii + "é" + _strAllAscii + "\U0010FFFF" + _strAllAscii;
-            _encoder = Encoding.ASCII.GetEncoder();
+            //_strWithNonAsciiData = _strAllAscii + "é" + _strAllAscii + "\U0010FFFF" + _strAllAscii;
+            //_encoder = Encoding.ASCII.GetEncoder();
+
+            string[] split = StringLength.Split('-');
+            int minInclusive = int.Parse(split[0]);
+            int maxInclusive = int.Parse(split[1]);
+
+            Random r = new Random(0x12345);
+
+            _bytesOfBytesAllAscii = new byte[32][];
+
+            for (int i = 0; i < _bytesOfBytesAllAscii.Length; i++)
+            {
+                _bytesOfBytesAllAscii[i] = Encoding.ASCII.GetBytes(new string('x', r.Next(minInclusive, maxInclusive + 1)));
+            }
         }
 
         //[Benchmark]
@@ -48,26 +68,38 @@ namespace ConsoleAppBenchmark
         //    return byteCount;
         //}
 
+        //[Benchmark]
+        //[MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        //public int GetChars()
+        //{
+        //    //ReadOnlySpan<byte> bytes = _bytesAllAscii;
+        //    //Span<char> chars = stackalloc char[256];
+
+        //    //int byteCount = 0;
+        //    //for (int i = 0; i < ITER_COUNT; i++)
+        //    //{
+        //    //    byteCount = Encoding.ASCII.GetChars(bytes, chars);
+        //    //}
+
+        //    //return byteCount;
+
+        //    byte[] bytes = new byte[1024];
+        //    MethodA(bytes);
+        //    MethodB(bytes);
+
+        //    return bytes[0];
+        //}
+
         [Benchmark]
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public int GetChars()
+        public int GetCharCount()
         {
-            //ReadOnlySpan<byte> bytes = _bytesAllAscii;
-            //Span<char> chars = stackalloc char[256];
+            int retVal = 0;
+            foreach (byte[] bytes in _bytesOfBytesAllAscii)
+            {
+                retVal += _asciiEncodingErrorFallback.GetCharCount(bytes);
+            }
 
-            //int byteCount = 0;
-            //for (int i = 0; i < ITER_COUNT; i++)
-            //{
-            //    byteCount = Encoding.ASCII.GetChars(bytes, chars);
-            //}
-
-            //return byteCount;
-
-            byte[] bytes = new byte[1024];
-            MethodA(bytes);
-            MethodB(bytes);
-
-            return bytes[0];
+            return retVal;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]

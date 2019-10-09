@@ -20,29 +20,19 @@ namespace ConsoleAppBenchmark
             public LocalCoreClrConfig()
             {
                 AddCustom30Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\30-master",
-                    displayName: "3.0-master",
-                    isBaseline: false);
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\master",
+                    displayName: "master",
+                    isBaseline: true);
 
                 //AddCustom30Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\memslice",
-                //    displayName: "memslice",
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
+                //    displayName: "proto",
                 //    isBaseline: false);
 
                 //AddCustom30Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_1",
-                //    displayName: "utf8_1",
-                //    isBaseline: true);
-
-                //AddCustom30Toolchain(
-                //  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_2",
-                //  displayName: "utf8_2",
+                //  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto2",
+                //  displayName: "proto2",
                 //  isBaseline: false);
-
-                //AddCustom30Toolchain(
-                // coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8_3",
-                // displayName: "utf8_3",
-                // isBaseline: false);
 
                 //AddCustom30Toolchain(
                 //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_test_no_hi",
@@ -63,6 +53,7 @@ namespace ConsoleAppBenchmark
                     targetFrameworkMoniker: "netcoreapp3.0",
                     displayName: displayName);
 
+                // var job = Job.ShortRun.With(toolchain);
                 var job = Job.Default.With(toolchain);
 
                 if (isBaseline)
@@ -80,7 +71,7 @@ namespace ConsoleAppBenchmark
 
                 // job = job.With(new[] { new EnvironmentVariable("COMPLUS_TieredCompilation", "0") });
 
-                job = job.WithWarmupCount(10);
+                // job = job.WithWarmupCount(10);
 
                 Add(job);
             }
@@ -99,8 +90,17 @@ namespace ConsoleAppBenchmark
 
         static void Main(string[] args)
         {
+            //Utf8StringRunner runner = new Utf8StringRunner();
+            //runner.Corpus = "39251-0.txt";
+            //runner.Setup();
+            //runner.Validate_Exp1();
+
+            // var summary = BenchmarkRunner.Run<Utf8ValidationRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<SliceRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
             var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
-            //var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<StringHashCodeRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
@@ -108,7 +108,7 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<HashRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<GetByteCountRunner>(new LocalCoreClrConfig());
-            //var summary = BenchmarkRunner.Run<ListRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<ListRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<MemoryRunner>(new LocalCoreClrConfig());
 
             //var runner = new JsonRunner();
@@ -117,42 +117,5 @@ namespace ConsoleAppBenchmark
 
             // var summary = BenchmarkRunner.Run<JsonRunner>(new LocalCoreClrConfig());
         }
-    }
-
-    public class CharRunner
-    {
-        private const int ITER_COUNT = 1_000_000;
-
-        private char _ca;
-        private char _cb;
-
-        [GlobalSetup]
-        public void Setup()
-        {
-            _ca = '\ud800';
-            _cb = '\udfff';
-        }
-
-        [Benchmark]
-        public int ConvertToInt32()
-        {
-            int retVal = default;
-            for (int i = 0; i < ITER_COUNT; i++)
-            {
-                retVal = char.ConvertToUtf32(_ca, _cb);
-            }
-            return retVal;
-        }
-
-        //[Benchmark]
-        //public bool IsSurrogatePair()
-        //{
-        //    bool retVal = default;
-        //    for (int i = 0; i < ITER_COUNT; i++)
-        //    {
-        //        retVal = char.IsSurrogatePair(_ca, _cb);
-        //    }
-        //    return retVal;
-        //}
     }
 }

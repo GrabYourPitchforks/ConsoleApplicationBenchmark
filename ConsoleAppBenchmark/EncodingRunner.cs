@@ -17,24 +17,25 @@ namespace ConsoleAppBenchmark
 
         // [Params("11.txt", "11-0.txt", "25249-0.txt", "30774-0.txt", "39251-0.txt")]
         // [Params("11-0.txt", "30774-0.txt", "39251-0.txt")]
-        // [Params("11.txt")]
-        [Params("25249-0.txt")]
+        [Params("11.txt")]
+        // [Params("39251-0.txt")]
+        // [Params("25249-0.txt")]
         public string Corpus;
 
-        [Benchmark]
-        public int GetByteCount()
-        {
-            string utf16Data = _utf16Data;
-            _ = utf16Data.Length; // JIT null check
+        //[Benchmark]
+        //public int GetByteCount()
+        //{
+        //    string utf16Data = _utf16Data;
+        //    _ = utf16Data.Length; // JIT null check
 
-            int byteCount = 0;
-            for (int i = ITER_COUNT; i > 0; i--)
-            {
-                byteCount = Encoding.UTF8.GetByteCount(utf16Data.AsSpan());
-            }
+        //    int byteCount = 0;
+        //    for (int i = ITER_COUNT; i > 0; i--)
+        //    {
+        //        byteCount = Encoding.UTF8.GetByteCount(utf16Data.AsSpan());
+        //    }
 
-            return byteCount;
-        }
+        //    return byteCount;
+        //}
 
         //[Benchmark]
         //public int GetBytes()
@@ -56,20 +57,20 @@ namespace ConsoleAppBenchmark
         //    return written;
         //}
 
-        //[Benchmark]
-        //public int GetCharCount()
-        //{
-        //    byte[] utf8Data = _utf8Data;
-        //    _ = utf8Data.Length; // JIT null check
+        [Benchmark]
+        public int GetCharCount()
+        {
+            byte[] utf8Data = _utf8Data;
+            _ = utf8Data.Length; // JIT null check
 
-        //    int charCount = 0;
-        //    for (int i = ITER_COUNT; i > 0; i--)
-        //    {
-        //        charCount = Encoding.UTF8.GetCharCount(utf8Data.AsSpan());
-        //    }
+            int charCount = 0;
+            for (int i = ITER_COUNT; i > 0; i--)
+            {
+                charCount = Encoding.UTF8.GetCharCount(utf8Data.AsSpan());
+            }
 
-        //    return charCount;
-        //}
+            return charCount;
+        }
 
         //[Benchmark]
         //public int GetChars()
