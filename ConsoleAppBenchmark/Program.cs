@@ -30,6 +30,16 @@ namespace ConsoleAppBenchmark
                 //    isBaseline: false);
 
                 //AddCustom30Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto2",
+                //    displayName: "proto2",
+                //    isBaseline: true);
+
+                //AddCustom30Toolchain(
+                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto3",
+                //   displayName: "proto3",
+                //   isBaseline: false);
+
+                //AddCustom30Toolchain(
                 //  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto2",
                 //  displayName: "proto2",
                 //  isBaseline: false);
@@ -46,7 +56,7 @@ namespace ConsoleAppBenchmark
                 // Add(DisassemblyDiagnoser.Create(new DisassemblyDiagnoserConfig(printAsm: true, recursiveDepth: 2)));
             }
 
-            private void AddCustom30Toolchain(string coreRunDirectory, string displayName, bool isBaseline = false, Dictionary<string, string> envVars = default)
+            private void AddCustom30Toolchain(string coreRunDirectory, string displayName, bool enableTieredCompilation = true, bool isBaseline = false, Dictionary<string, string> envVars = default)
             {
                 var toolchain = new CoreRunToolchain(
                     coreRun: new DirectoryInfo(coreRunDirectory).GetFiles("CoreRun.exe").Single(),
@@ -59,6 +69,12 @@ namespace ConsoleAppBenchmark
                 if (isBaseline)
                 {
                     job = job.AsBaseline();
+                }
+
+                if (!enableTieredCompilation)
+                {
+                    envVars ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    envVars["COMPLUS_TieredCompilation"] = "0";
                 }
 
                 if (envVars != null)
@@ -91,14 +107,25 @@ namespace ConsoleAppBenchmark
         static void Main(string[] args)
         {
             //Utf8StringRunner runner = new Utf8StringRunner();
-            //runner.Corpus = "39251-0.txt";
+            //runner.Corpus = "25249-0.txt";
             //runner.Setup();
-            //runner.Validate_Exp1();
+            //while (true)
+            //{
+            //    runner.Validate_Exp1();
+            //}
+
+            //EncodingRunner runner = new EncodingRunner();
+            //runner.Setup();
+            //while (true)
+            //{
+            //    runner.GetString_FromByteArray();
+            //}
 
             // var summary = BenchmarkRunner.Run<Utf8ValidationRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SliceRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
             var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<BitManipulaitonRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StringHashCodeRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());

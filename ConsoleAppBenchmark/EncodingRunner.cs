@@ -17,10 +17,13 @@ namespace ConsoleAppBenchmark
 
         // [Params("11.txt", "11-0.txt", "25249-0.txt", "30774-0.txt", "39251-0.txt")]
         // [Params("11-0.txt", "30774-0.txt", "39251-0.txt")]
-        [Params("11.txt")]
+        // [Params("11.txt")]
         // [Params("39251-0.txt")]
         // [Params("25249-0.txt")]
         public string Corpus;
+
+        [Params("", "Hello", "Hello world!", "Γεια σου κόσμε", "Nǐhǎo 你好", "Lorem ipsum dolor sit amet, consectetur adipiscing elit.")]
+        public string Text;
 
         //[Benchmark]
         //public int GetByteCount()
@@ -57,20 +60,20 @@ namespace ConsoleAppBenchmark
         //    return written;
         //}
 
-        [Benchmark]
-        public int GetCharCount()
-        {
-            byte[] utf8Data = _utf8Data;
-            _ = utf8Data.Length; // JIT null check
+        //[Benchmark]
+        //public int GetCharCount()
+        //{
+        //    byte[] utf8Data = _utf8Data;
+        //    _ = utf8Data.Length; // JIT null check
 
-            int charCount = 0;
-            for (int i = ITER_COUNT; i > 0; i--)
-            {
-                charCount = Encoding.UTF8.GetCharCount(utf8Data.AsSpan());
-            }
+        //    int charCount = 0;
+        //    for (int i = ITER_COUNT; i > 0; i--)
+        //    {
+        //        charCount = Encoding.UTF8.GetCharCount(utf8Data.AsSpan());
+        //    }
 
-            return charCount;
-        }
+        //    return charCount;
+        //}
 
         //[Benchmark]
         //public int GetChars()
@@ -187,18 +190,33 @@ namespace ConsoleAppBenchmark
         //    return charCount;
         //}
 
+        [Benchmark]
+        public string GetString_FromByteArray()
+        {
+            return Encoding.UTF8.GetString(_utf8Data);
+        }
+
+        [Benchmark]
+        public byte[] GetByteArray_FromString()
+        {
+            return Encoding.UTF8.GetBytes(Text);
+        }
+
         [GlobalSetup]
         public void Setup()
         {
-            _utf8Data = File.ReadAllBytes(SampleTextsFolder + @"\" + Corpus);
+            //_utf8Data = File.ReadAllBytes(SampleTextsFolder + @"\" + Corpus);
 
-            // strip off UTF-8 BOM if it exists
-            if (_utf8Data.Length > 3 && _utf8Data.AsSpan(0, 3).SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF }))
-            {
-                _utf8Data = _utf8Data.AsSpan(3).ToArray();
-            }
+            //// strip off UTF-8 BOM if it exists
+            //if (_utf8Data.Length > 3 && _utf8Data.AsSpan(0, 3).SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF }))
+            //{
+            //    _utf8Data = _utf8Data.AsSpan(3).ToArray();
+            //}
 
-            _utf16Data = Encoding.UTF8.GetString(_utf8Data);
+            //_utf16Data = Encoding.UTF8.GetString(_utf8Data);
+
+            // _utf8Data = new byte[32];
+            _utf8Data = Encoding.UTF8.GetBytes(Text);
         }
     }
 }

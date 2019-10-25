@@ -15,13 +15,13 @@ using nuint = System.UInt64;
 
 namespace ConsoleAppBenchmark
 {
-    [MemoryDiagnoser]
+    // [MemoryDiagnoser]
     public unsafe class Utf8StringRunner
     {
         private const string SampleTextsFolder = @"C:\Users\levib\source\repos\fast-utf8\FastUtf8Tester\SampleTexts\";
 
-        //[Params("11.txt", "11-0.txt", "25249-0.txt", "30774-0.txt", "39251-0.txt")]
-        [Params("39251-0.txt")]
+        // [Params("11.txt", "11-0.txt", "25249-0.txt", "30774-0.txt", "39251-0.txt")]
+        [Params("25249-0.txt")]
         public string Corpus;
 
         private byte[] _utf8Bytes;
@@ -60,8 +60,9 @@ namespace ConsoleAppBenchmark
         //    utf8Source: ref MemoryMarshal.GetReference<byte>(_utf8Bytes),
         //    utf16Destination: ref MemoryMarshal.GetReference<char>(_utf16Chars));
 
-        //[Benchmark(Baseline = true)]
-        //public bool Validate_Base() => Encoding.UTF8.GetCharCount(_utf8Bytes) >= 0;
+        [Benchmark(Baseline = true)]
+        //[Benchmark]
+        public bool Utf8_Is_Valid() => Encoding.UTF8.GetCharCount(_utf8Bytes) >= 0;
 
         [Benchmark]
         public bool Validate_Exp1() => IsWellFormedUtf8(_utf8Bytes);
@@ -329,6 +330,8 @@ namespace ConsoleAppBenchmark
 
             Vector128<sbyte> vecAll0F = Vector128.Create(unchecked((sbyte)0x0F));
             Vector128<sbyte> vecAll61 = Vector128.Create(unchecked((sbyte)0x61));
+            Vector128<sbyte> vecAll6F = Vector128.Create(unchecked((sbyte)0x6F));
+            Vector128<sbyte> vecAll90 = Vector128.Create(unchecked((sbyte)0x90));
             Vector128<sbyte> vecAllA0 = Vector128.Create(unchecked((sbyte)0xA0));
             Vector128<sbyte> vecAllC0 = Vector128.Create(unchecked((sbyte)0xC0));
             Vector128<sbyte> vecAllE0 = Vector128.Create(unchecked((sbyte)0xE0));
@@ -374,20 +377,44 @@ namespace ConsoleAppBenchmark
                 {
                     // Now get a vector of all the three-byte headers [ E0 .. EF ] we have.
 
-                    Vector128<sbyte> mask = Sse2.Subtract(thisVector, vecAllE0);
-                    Vector128<sbyte> bytesToMaskOut = Sse2.CompareGreaterThan(mask, vecAll0F);
-                    mask = Sse2.Or(mask, bytesToMaskOut);
+                    // Vector128<sbyte> threeByteHeaderBytes = 
 
-                    Vector128<sbyte> shufMinIncl = Ssse3.Shuffle(Shuf3MinInclusive, mask);
-                    Vector128<sbyte> shufMaxExcl = Ssse3.Shuffle(Shuf3MaxExclusive, mask);
                     Vector128<sbyte> shifted = Sse2.ShiftRightLogical128BitLane(thisVector, 1);
+                    Vector128<sbyte> shiftedX = Sse2.ShiftRightLogical128BitLane(continuationBytes, 2);
 
-                    Vector128<sbyte> validThreeByteSequences =
-                        Sse2.And(
-                            Sse2.ShiftRightLogical128BitLane(continuationBytes, 2),
-                            Sse2.AndNot(
-                                Sse2.CompareGreaterThan(shufMinIncl, shifted),
-                                Sse2.CompareGreaterThan(shufMaxExcl, shifted)));
+                    Vector128<sbyte> minInclusive = Sse41.BlendVariable(
+                        Vector128.Create(unchecked((sbyte)0x80)),
+                        Vector128.Create(unchecked((sbyte)0xA0)),
+                        Sse2.CompareEqual(thisVector, Vector128.Create(unchecked((sbyte)0xE0))));
+
+                    Vector128<sbyte> maxExclusive = Sse41.BlendVariable(
+                        Vector128.Create(unchecked((sbyte)0xC0)),
+                        Vector128.Create(unchecked((sbyte)0xA0)),
+                        Sse2.CompareEqual(thisVector, Vector128.Create(unchecked((sbyte)0xED))));
+
+                    Vector128<sbyte> xyz =
+                        Sse2.AndNot(
+                            Sse2.CompareGreaterThan(minInclusive, shifted),
+                            Sse2.CompareGreaterThan(maxExclusive, shifted));
+
+                    xyz = Sse2.And(xyz, shiftedX);
+
+                    Vector128<sbyte> validThreeByteSequences = Sse2.CompareGreaterThan(Sse2.Add(thisVector, vecAll90), vecAll6F);
+                    validThreeByteSequences = Sse2.And(validThreeByteSequences, xyz);
+
+
+                    //Vector128<sbyte> mask = Sse2.Subtract(thisVector, vecAllE0);
+                    //Vector128<sbyte> bytesToMaskOut = Sse2.CompareGreaterThan(mask, vecAll0F);
+                    //mask = Sse2.Or(mask, bytesToMaskOut);
+
+                    //Vector128<sbyte> shufMinIncl = Ssse3.Shuffle(Shuf3MinInclusive, mask);
+                    //Vector128<sbyte> shufMaxExcl = Ssse3.Shuffle(Shuf3MaxExclusive, mask);
+                    //Vector128<sbyte> shifted = Sse2.ShiftRightLogical128BitLane(thisVector, 1);
+
+                    //Vector128<sbyte> validThreeByteSequences =
+                    //    Sse2.And(
+                    //        Sse2.ShiftRightLogical128BitLane(continuationBytes, 2),
+                    //        );
 
                     uint threeByteMask = (uint)Sse2.MoveMask(validThreeByteSequences);
                     combinedMask += threeByteMask * 8; // set 1 for all ASCII and valid 2 or 3-byte sequences, 0 otherwise
