@@ -61,7 +61,6 @@ namespace ConsoleAppBenchmark
         //    utf16Destination: ref MemoryMarshal.GetReference<char>(_utf16Chars));
 
         [Benchmark(Baseline = true)]
-        //[Benchmark]
         public bool Utf8_Is_Valid() => Encoding.UTF8.GetCharCount(_utf8Bytes) >= 0;
 
         [Benchmark]
@@ -303,12 +302,12 @@ namespace ConsoleAppBenchmark
         {
             fixed (byte* pBuffer = &MemoryMarshal.GetReference(buffer))
             {
-                return IsWellFormedUtf8(pBuffer, (uint)buffer.Length);
+                return IsWellFormedUtf8_Avx2(pBuffer, (uint)buffer.Length);
             }
         }
 
-        private static readonly Vector128<sbyte> Shuf3MinInclusive = Vector128.Create(0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80).AsSByte();
-        private static readonly Vector128<sbyte> Shuf3MaxExclusive = Vector128.Create(0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0).AsSByte();
+        private static readonly Vector256<sbyte> Shuf3MinInclusive = Vector256.Create(0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80).AsSByte();
+        private static readonly Vector256<sbyte> Shuf3MaxExclusive = Vector256.Create(0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0).AsSByte();
 
         private static readonly Vector128<sbyte> Shuf4MinInclusive = Vector128.Create(0x90, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00).AsSByte();
         private static readonly Vector128<sbyte> Shuf4MaxExclusive = Vector128.Create(0xC0, 0xC0, 0xC0, 0xC0, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00).AsSByte();
@@ -328,45 +327,45 @@ namespace ConsoleAppBenchmark
             pBuffer += asciiByteCount;
             bufferLength -= asciiByteCount;
 
-            Vector128<sbyte> vecAll0F = Vector128.Create(unchecked((sbyte)0x0F));
-            Vector128<sbyte> vecAll61 = Vector128.Create(unchecked((sbyte)0x61));
-            Vector128<sbyte> vecAll6F = Vector128.Create(unchecked((sbyte)0x6F));
-            Vector128<sbyte> vecAll90 = Vector128.Create(unchecked((sbyte)0x90));
-            Vector128<sbyte> vecAllA0 = Vector128.Create(unchecked((sbyte)0xA0));
-            Vector128<sbyte> vecAllC0 = Vector128.Create(unchecked((sbyte)0xC0));
-            Vector128<sbyte> vecAllE0 = Vector128.Create(unchecked((sbyte)0xE0));
-            Vector128<sbyte> vecAllF0 = Vector128.Create(unchecked((sbyte)0xF0));
+            Vector256<sbyte> vecAll0F = Vector256.Create(unchecked((sbyte)0x0F));
+            Vector256<sbyte> vecAll61 = Vector256.Create(unchecked((sbyte)0x61));
+            Vector256<sbyte> vecAll6F = Vector256.Create(unchecked((sbyte)0x6F));
+            Vector256<sbyte> vecAll90 = Vector256.Create(unchecked((sbyte)0x90));
+            Vector256<sbyte> vecAllA0 = Vector256.Create(unchecked((sbyte)0xA0));
+            Vector256<sbyte> vecAllC0 = Vector256.Create(unchecked((sbyte)0xC0));
+            Vector256<sbyte> vecAllE0 = Vector256.Create(unchecked((sbyte)0xE0));
+            Vector256<sbyte> vecAllF0 = Vector256.Create(unchecked((sbyte)0xF0));
 
-            while ((nint)bufferLength >= sizeof(Vector128<sbyte>))
+            while ((nint)bufferLength >= sizeof(Vector256<sbyte>))
             {
-                Vector128<sbyte> thisVector = Unsafe.ReadUnaligned<Vector128<sbyte>>(pBuffer);
+                Vector256<sbyte> thisVector = Unsafe.ReadUnaligned<Vector256<sbyte>>(pBuffer);
 
                 // Try a quick all-ASCII check?
 
-                uint combinedMask = (uint)Sse2.MoveMask(thisVector);
+                uint combinedMask = (uint)Avx2.MoveMask(thisVector);
                 if (combinedMask == 0)
                 {
-                    pBuffer += sizeof(Vector128<sbyte>);
-                    bufferLength -= (uint)sizeof(Vector128<sbyte>);
+                    pBuffer += sizeof(Vector256<sbyte>);
+                    bufferLength -= (uint)sizeof(Vector256<sbyte>);
                     continue;
                 }
 
-                combinedMask = (ushort)~combinedMask; // set 1 for all ASCII bytes, 0 for all non-ASCII bytes
+                combinedMask = ~combinedMask; // set 1 for all ASCII bytes, 0 for all non-ASCII bytes
 
                 // Get a vector of all the continuation bytes [ 80 .. BF ] we have.
 
-                Vector128<sbyte> continuationBytes = Sse2.CompareGreaterThan(vecAllC0, thisVector);
+                Vector256<sbyte> continuationBytes = Avx2.CompareGreaterThan(vecAllC0, thisVector);
 
                 // Now get a vector of all the two-byte headers [ C2 .. DF ] we have.
 
-                Vector128<sbyte> twoByteHeaderBytes = Sse2.CompareGreaterThan(Sse2.Add(thisVector, vecAllA0), vecAll61);
-                Vector128<sbyte> validTwoByteSequences = Sse2.And(Sse2.ShiftRightLogical128BitLane(continuationBytes, 1), twoByteHeaderBytes);
+                Vector256<sbyte> twoByteHeaderBytes = Avx2.CompareGreaterThan(Avx2.Add(thisVector, vecAllA0), vecAll61);
+                Vector256<sbyte> validTwoByteSequences = Avx2.And(Avx2.ShiftRightLogical128BitLane(continuationBytes, 1), twoByteHeaderBytes);
 
-                uint twoByteMask = (uint)Sse2.MoveMask(validTwoByteSequences);
+                uint twoByteMask = (uint)Avx2.MoveMask(validTwoByteSequences);
                 combinedMask += twoByteMask * 4; // set 1 for all ASCII and valid 2-byte sequences, 0 otherwise
                 combinedMask -= twoByteMask;
 
-                if (((combinedMask + 1) & 0x3FFF) == 0)
+                if (((combinedMask + 1) & 0x3FFF_FFFF) == 0)
                 {
                     nuint stride = Bmi1.TrailingZeroCount(~combinedMask);
                     pBuffer += stride;
@@ -379,48 +378,50 @@ namespace ConsoleAppBenchmark
 
                     // Vector128<sbyte> threeByteHeaderBytes = 
 
-                    Vector128<sbyte> shifted = Sse2.ShiftRightLogical128BitLane(thisVector, 1);
-                    Vector128<sbyte> shiftedX = Sse2.ShiftRightLogical128BitLane(continuationBytes, 2);
+                    //Vector256<sbyte> shifted = Avx2.ShiftRightLogical128BitLane(thisVector, 1);
+                    //Vector256<sbyte> shiftedX = Avx2.ShiftRightLogical128BitLane(continuationBytes, 2);
 
-                    Vector128<sbyte> minInclusive = Sse41.BlendVariable(
-                        Vector128.Create(unchecked((sbyte)0x80)),
-                        Vector128.Create(unchecked((sbyte)0xA0)),
-                        Sse2.CompareEqual(thisVector, Vector128.Create(unchecked((sbyte)0xE0))));
+                    //Vector256<sbyte> minInclusive = Avx2.BlendVariable(
+                    //    Vector256.Create(unchecked((sbyte)0x80)),
+                    //    Vector256.Create(unchecked((sbyte)0xA0)),
+                    //    Avx2.CompareEqual(thisVector, Vector256.Create(unchecked((sbyte)0xE0))));
 
-                    Vector128<sbyte> maxExclusive = Sse41.BlendVariable(
-                        Vector128.Create(unchecked((sbyte)0xC0)),
-                        Vector128.Create(unchecked((sbyte)0xA0)),
-                        Sse2.CompareEqual(thisVector, Vector128.Create(unchecked((sbyte)0xED))));
+                    //Vector256<sbyte> maxExclusive = Avx2.BlendVariable(
+                    //    Vector256.Create(unchecked((sbyte)0xC0)),
+                    //    Vector256.Create(unchecked((sbyte)0xA0)),
+                    //    Avx2.CompareEqual(thisVector, Vector256.Create(unchecked((sbyte)0xED))));
 
-                    Vector128<sbyte> xyz =
-                        Sse2.AndNot(
-                            Sse2.CompareGreaterThan(minInclusive, shifted),
-                            Sse2.CompareGreaterThan(maxExclusive, shifted));
+                    //Vector256<sbyte> xyz =
+                    //    Avx2.AndNot(
+                    //        Avx2.CompareGreaterThan(minInclusive, thisVector),
+                    //        Avx2.CompareGreaterThan(maxExclusive, thisVector));
 
-                    xyz = Sse2.And(xyz, shiftedX);
+                    //xyz = Avx2.And(xyz, shiftedX);
 
-                    Vector128<sbyte> validThreeByteSequences = Sse2.CompareGreaterThan(Sse2.Add(thisVector, vecAll90), vecAll6F);
-                    validThreeByteSequences = Sse2.And(validThreeByteSequences, xyz);
+                    //Vector256<sbyte> validThreeByteSequences = Avx2.CompareGreaterThan(Avx2.Add(thisVector, vecAll90), vecAll6F);
+                    //validThreeByteSequences = Avx2.And(validThreeByteSequences, xyz);
 
 
-                    //Vector128<sbyte> mask = Sse2.Subtract(thisVector, vecAllE0);
-                    //Vector128<sbyte> bytesToMaskOut = Sse2.CompareGreaterThan(mask, vecAll0F);
-                    //mask = Sse2.Or(mask, bytesToMaskOut);
+                    Vector256<sbyte> mask = Avx2.Subtract(thisVector, vecAllE0);
+                    Vector256<sbyte> bytesToMaskOut = Avx2.CompareGreaterThan(mask, vecAll0F);
+                    mask = Avx2.Or(mask, bytesToMaskOut);
 
-                    //Vector128<sbyte> shufMinIncl = Ssse3.Shuffle(Shuf3MinInclusive, mask);
-                    //Vector128<sbyte> shufMaxExcl = Ssse3.Shuffle(Shuf3MaxExclusive, mask);
-                    //Vector128<sbyte> shifted = Sse2.ShiftRightLogical128BitLane(thisVector, 1);
+                    Vector256<sbyte> shufMinIncl = Avx2.Shuffle(Shuf3MinInclusive, mask);
+                    Vector256<sbyte> shufMaxExcl = Avx2.Shuffle(Shuf3MaxExclusive, mask);
+                    Vector256<sbyte> shifted = Avx2.AlignRight(thisVector, thisVector, 1);
 
-                    //Vector128<sbyte> validThreeByteSequences =
-                    //    Sse2.And(
-                    //        Sse2.ShiftRightLogical128BitLane(continuationBytes, 2),
-                    //        );
+                    Vector256<sbyte> validThreeByteSequences =
+                        Avx2.And(
+                            Avx2.ShiftRightLogical128BitLane(continuationBytes, 2),
+                            Avx2.AndNot(
+                                Avx2.CompareGreaterThan(shufMinIncl, shifted),
+                                Avx2.CompareGreaterThan(shufMaxExcl, shifted)));
 
-                    uint threeByteMask = (uint)Sse2.MoveMask(validThreeByteSequences);
+                    uint threeByteMask = (uint)Avx2.MoveMask(validThreeByteSequences);
                     combinedMask += threeByteMask * 8; // set 1 for all ASCII and valid 2 or 3-byte sequences, 0 otherwise
                     combinedMask -= threeByteMask;
 
-                    if (((combinedMask + 1) & 0x1FFF) == 0)
+                    if (((combinedMask + 1) & 0x1FFF_FFFF) == 0)
                     {
                         nuint stride = Bmi1.TrailingZeroCount(~combinedMask);
                         pBuffer += stride;
@@ -429,39 +430,201 @@ namespace ConsoleAppBenchmark
                     }
                 }
 
+                //{
+                //    // Now get a vector of all the four-byte headers [ F0 .. F4 ] we have.
+
+                //    Vector256<sbyte> mask = Avx2.Subtract(thisVector, vecAllF0);
+                //    Vector256<sbyte> bytesToMaskOut = Avx2.CompareGreaterThan(mask, vecAll0F);
+                //    mask = Avx2.Or(mask, bytesToMaskOut);
+
+                //    Vector256<sbyte> shufMinIncl = Avx2.Shuffle(Shuf4MinInclusive, mask);
+                //    Vector256<sbyte> shufMaxExcl = Avx2.Shuffle(Shuf4MaxExclusive, mask);
+                //    Vector256<sbyte> shifted = Avx2.ShiftRightLogical128BitLane(thisVector, 1);
+
+                //    Vector128<sbyte> validFourByteSequences =
+                //        Sse2.And(
+                //            Sse2.And(
+                //                Sse2.ShiftRightLogical128BitLane(continuationBytes, 2),
+                //                Sse2.ShiftRightLogical128BitLane(continuationBytes, 3)),
+                //            Sse2.AndNot(
+                //                Sse2.CompareGreaterThan(shufMinIncl, shifted),
+                //                Sse2.CompareGreaterThan(shufMaxExcl, shifted)));
+
+                //    uint fourByteMask = (uint)Sse2.MoveMask(validFourByteSequences);
+                //    combinedMask += fourByteMask * 16; // set 1 for all ASCII and valid 2, 3, or 4-byte sequences, 0 otherwise
+                //    combinedMask -= fourByteMask;
+
+                //    if ((combinedMask & 1) == 0)
+                //    {
+                //        return false; // we didn't even make a single byte of progress - must have seen bad data
+                //    }
+
+                //    nuint stride = Bmi1.TrailingZeroCount(~combinedMask);
+                //    pBuffer += stride;
+                //    bufferLength -= stride;
+                //    continue;
+                //}
+            }
+
+            return true;
+        }
+
+        private static readonly Vector256<sbyte> s_3ByteFirstContByteLowerInclusive = Vector256.Create(
+            0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+            0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80).AsSByte();
+
+        private static readonly Vector256<sbyte> s_3ByteFirstContByteUpperExclusive = Vector256.Create(
+            0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0,
+            0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0).AsSByte();
+
+        private static readonly Vector256<sbyte> s_4ByteFirstContByteLowerInclusive = Vector256.Create(
+            0x90, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x90, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00).AsSByte();
+
+        private static readonly Vector256<sbyte> s_4ByteFirstContByteUpperExclusive = Vector256.Create(
+            0xC0, 0xC0, 0xC0, 0xC0, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xC0, 0xC0, 0xC0, 0xC0, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00).AsSByte();
+
+        private static readonly Vector256<byte> s_vecAll70 = Vector256.Create((byte)0x70);
+        private static readonly Vector256<sbyte> s_vecAllE0 = Vector256.Create(unchecked((sbyte)0xE0));
+        private static readonly Vector256<sbyte> s_vecAllF0 = Vector256.Create(unchecked((sbyte)0xF0));
+
+        private static bool IsWellFormedUtf8_Avx2(byte* pBuffer, nuint bufferLength)
+        {
+            // Optimization: Can we stay in the all-ASCII code paths?
+
+            nuint asciiByteCount = GetIndexOfFirstNonAsciiByte_Sse2(pBuffer, bufferLength);
+            if (asciiByteCount == bufferLength)
+            {
+                return true;
+            }
+
+            // Found some non-ASCII data. Must perform manual checks.
+
+            pBuffer += asciiByteCount;
+            bufferLength -= asciiByteCount;
+
+            Vector256<sbyte> vecAll42 = Vector256.Create(unchecked((sbyte)0x42));
+            Vector256<sbyte> vecAll9E = Vector256.Create(unchecked((sbyte)0x9E));
+            Vector256<sbyte> vecAllC0 = Vector256.Create(unchecked((sbyte)0xC0));
+
+            while ((nint)bufferLength >= sizeof(Vector256<sbyte>))
+            {
+                Vector256<sbyte> data = Unsafe.ReadUnaligned<Vector256<sbyte>>(pBuffer);
+
+                // See if we can read at least 31 ASCII bytes.
+
+                uint asciiMask = (uint)Avx2.MoveMask(data);
+                if ((asciiMask & 0x7FFF_FFFF) == 0)
                 {
-                    // Now get a vector of all the four-byte headers [ F0 .. F4 ] we have.
+                    nuint adjustment = asciiMask >> 31;
+                    pBuffer += sizeof(Vector256<sbyte>);
+                    pBuffer -= adjustment;
+                    bufferLength -= (uint)sizeof(Vector256<sbyte>);
+                    bufferLength += adjustment;
+                    continue;
+                }
 
-                    Vector128<sbyte> mask = Sse2.Subtract(thisVector, vecAllF0);
-                    Vector128<sbyte> bytesToMaskOut = Sse2.CompareGreaterThan(mask, vecAll0F);
-                    mask = Sse2.Or(mask, bytesToMaskOut);
+                // There's non-ASCII data somewhere in the buffer.
+                // Let's get a mask of all the bytes which are continuation bytes.
+                // Then get a mask of all bytes [ C2 .. DF ].
 
-                    Vector128<sbyte> shufMinIncl = Ssse3.Shuffle(Shuf4MinInclusive, mask);
-                    Vector128<sbyte> shufMaxExcl = Ssse3.Shuffle(Shuf4MaxExclusive, mask);
-                    Vector128<sbyte> shifted = Sse2.ShiftRightLogical128BitLane(thisVector, 1);
+                uint contByteMask = (uint)Avx2.MoveMask(
+                    Avx2.CompareGreaterThan(vecAllC0, data)); // check within range [ 80, C0 )
+                contByteMask >>= 1; // shift this down to match multi-byte start marker location
 
-                    Vector128<sbyte> validFourByteSequences =
-                        Sse2.And(
-                            Sse2.And(
-                                Sse2.ShiftRightLogical128BitLane(continuationBytes, 2),
-                                Sse2.ShiftRightLogical128BitLane(continuationBytes, 3)),
-                            Sse2.AndNot(
-                                Sse2.CompareGreaterThan(shufMinIncl, shifted),
-                                Sse2.CompareGreaterThan(shufMaxExcl, shifted)));
+                uint twoByteHeaderMask = (uint)Avx2.MoveMask(
+                    Avx2.CompareGreaterThan(vecAll9E, Avx2.Subtract(data, vecAll42))); // check within range [ C2, E0 )
 
-                    uint fourByteMask = (uint)Sse2.MoveMask(validFourByteSequences);
-                    combinedMask += fourByteMask * 16; // set 1 for all ASCII and valid 2, 3, or 4-byte sequences, 0 otherwise
-                    combinedMask -= fourByteMask;
+                uint validTwoByteSequenceMask = twoByteHeaderMask & contByteMask;
+                uint combinedMask = validTwoByteSequenceMask * 3;
+                combinedMask -= asciiMask;
 
-                    if ((combinedMask & 1) == 0)
-                    {
-                        return false; // we didn't even make a single byte of progress - must have seen bad data
-                    }
-
-                    nuint stride = Bmi1.TrailingZeroCount(~combinedMask);
+                if ((combinedMask & 0x3FFF_FFFF) == 0)
+                {
+                    nuint stride = (uint)BitOperations.TrailingZeroCount(combinedMask);
                     pBuffer += stride;
                     bufferLength -= stride;
                     continue;
+                }
+
+                // After accounting for ASCII chars and 2-byte sequences, there are still gaps.
+                // Perhaps there's a 3-byte sequence somewhere in the buffer?
+                //
+                // We'll need to right-shift the entire data vector by 1 element.
+                // Can't use vpslrldq across two 128-bit lanes, so perform a permutation to get
+                // the elements to line up correctly. The 0x81 const below generates the vector
+                // [ 00 00 ... 00 00 | 32 31 ... 18 17 ] from the input [ 32 31 ... 18 17 | 16 15 ... 02 01 ].
+
+                Vector256<sbyte> dataRightShiftedOne =
+                    Avx2.Or(
+                        Avx2.ShiftLeftLogical128BitLane(Avx2.Permute2x128(data, data, 0x81), 15),
+                        Avx2.ShiftRightLogical128BitLane(data, 1));
+
+                contByteMask >>= 1;
+
+                {
+                    // The logic below creates a new temp vector where:
+                    // input = [ E0 .. EF ] is converted to [ 70 .. 7F ],
+                    // and all other elements fall somewhere in [ 80 .. FF ] due to saturation.
+                    // Since this sets the high bit, the pshufb operation will set the destination to 0.
+                    // n.b. we use unsigned saturation below.
+
+                    Vector256<sbyte> tempSaturated = Avx2.AddSaturate(Avx2.Subtract(data, s_vecAllE0).AsByte(), s_vecAll70).AsSByte();
+
+                    Vector256<sbyte> failsLowerBoundInclusive =
+                        Avx2.CompareGreaterThan(Avx2.Shuffle(s_3ByteFirstContByteLowerInclusive, tempSaturated), dataRightShiftedOne);
+
+                    Vector256<sbyte> satisfiesUpperBoundExclusive =
+                        Avx2.CompareGreaterThan(Avx2.Shuffle(s_3ByteFirstContByteUpperExclusive, tempSaturated), dataRightShiftedOne);
+
+                    uint threeByteHeaderMask = (uint)Avx2.MoveMask(Avx2.AndNot(failsLowerBoundInclusive, satisfiesUpperBoundExclusive));
+                    threeByteHeaderMask &= contByteMask; // = 1 if the byte at this index begins a valid 3-byte sequence
+
+                    combinedMask += threeByteHeaderMask * 8; // fast combinedMask += threeByteHeaderMask * 7
+                    combinedMask -= threeByteHeaderMask;
+
+                    if ((combinedMask & 0x1FFF_FFFF) == 0)
+                    {
+                        nuint stride = (uint)BitOperations.TrailingZeroCount(combinedMask);
+                        pBuffer += stride;
+                        bufferLength -= stride;
+                        continue;
+                    }
+                }
+
+                // After accounting for ASCII chars and 2- and 3-byte sequences, there are still gaps.
+                // Perhaps there's a 4-byte sequence somewhere in the buffer?
+
+                contByteMask >>= 1;
+
+                {
+                    // Similar to the 3-byte logic above, but normalizes [ F0 .. FF ] to [ 70 .. 7F ]
+                    // and bumps all other bytes up to [ 80 .. FF ] due to unsigned saturation.
+
+                    Vector256<sbyte> tempSaturated = Avx2.AddSaturate(Avx2.Subtract(data, s_vecAllF0).AsByte(), s_vecAll70).AsSByte();
+
+                    Vector256<sbyte> failsLowerBoundInclusive =
+                        Avx2.CompareGreaterThan(Avx2.Shuffle(s_4ByteFirstContByteLowerInclusive, tempSaturated), dataRightShiftedOne);
+
+                    Vector256<sbyte> satisfiesUpperBoundExclusive =
+                        Avx2.CompareGreaterThan(Avx2.Shuffle(s_4ByteFirstContByteUpperExclusive, tempSaturated), dataRightShiftedOne);
+
+                    uint fourByteHeaderMask = (uint)Avx2.MoveMask(Avx2.AndNot(failsLowerBoundInclusive, satisfiesUpperBoundExclusive));
+                    fourByteHeaderMask &= contByteMask; // = 1 if the byte at this index begins a valid 4-byte sequence
+
+                    combinedMask += fourByteHeaderMask * 16; // fast combinedMask += threeByteHeaderMask * 15
+                    combinedMask -= fourByteHeaderMask;
+
+                    if ((combinedMask & 0x1FFF_FFFF) == 0)
+                    {
+                        nuint stride = (uint)BitOperations.TrailingZeroCount(combinedMask);
+                        pBuffer += stride;
+                        bufferLength -= stride;
+                        continue;
+                    }
+
+                    return false; // we saw bad data somewhere
                 }
             }
 
@@ -819,6 +982,34 @@ namespace ConsoleAppBenchmark
 
                 return numAsciiBytes;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector256<sbyte> ShiftBytesRightByOne_Avx2(Vector256<sbyte> v)
+        {
+            Debug.Assert(Avx2.IsSupported);
+
+            // Assume v = [ 32 31 30 ... 19 18 17 | 16 15 14 ... 03 02 01 ],
+            // and assume byteCount = 2 for the sake of the below examples.
+
+            Vector256<sbyte> temp = Avx2.Permute2x128(v, v, 0x81);                // = [ 00 00 00 ... 00 00 00 | 32 31 30 ... 19 18 17 ]
+            v = Avx2.ShiftRightLogical128BitLane(v, 1);             // = [ 00 00 32 ... 21 20 19 | 00 00 16 ... 05 04 03 ]
+            temp = Avx2.ShiftLeftLogical128BitLane(temp, 15); // = [ 00 00 00 ... 00 00 00 | 18 17 00 ... 00 00 00 ]
+            return Avx2.Or(v, temp);                                              // = [ 00 00 32 ... 21 20 19 | 18 17 16 ... 05 04 03 ]
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector256<sbyte> ShiftBytesRightByTwo_Avx2(Vector256<sbyte> v)
+        {
+            Debug.Assert(Avx2.IsSupported);
+
+            // Assume v = [ 32 31 30 ... 19 18 17 | 16 15 14 ... 03 02 01 ],
+            // and assume byteCount = 2 for the sake of the below examples.
+
+            Vector256<sbyte> temp = Avx2.Permute2x128(v, v, 0x81);                // = [ 00 00 00 ... 00 00 00 | 32 31 30 ... 19 18 17 ]
+            v = Avx2.ShiftRightLogical128BitLane(v, 2);             // = [ 00 00 32 ... 21 20 19 | 00 00 16 ... 05 04 03 ]
+            temp = Avx2.ShiftLeftLogical128BitLane(temp, 14); // = [ 00 00 00 ... 00 00 00 | 18 17 00 ... 00 00 00 ]
+            return Avx2.Or(v, temp);                                              // = [ 00 00 32 ... 21 20 19 | 18 17 16 ... 05 04 03 ]
         }
 
     }
