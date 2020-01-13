@@ -21,6 +21,7 @@ namespace ConsoleAppBenchmark
         private const string SampleTextsFolder = @"C:\Users\levib\source\repos\fast-utf8\FastUtf8Tester\SampleTexts\";
 
         // [Params("11.txt", "11-0.txt", "25249-0.txt", "30774-0.txt", "39251-0.txt")]
+        // [Params("25249-0.txt")]
         [Params("25249-0.txt")]
         public string Corpus;
 
@@ -43,6 +44,8 @@ namespace ConsoleAppBenchmark
             //string s = new string('é', 17170);
             //_utf8Bytes = Encoding.UTF8.GetBytes(s);
             // _utf8Bytes = File.ReadAllBytes(@"C:\Users\levib\source\repos\fast-utf8\FastUtf8Tester\SampleTexts\30774-0.txt");
+
+            GC.KeepAlive(Constants);
         }
 
         //[Benchmark(Baseline = true)]
@@ -60,7 +63,7 @@ namespace ConsoleAppBenchmark
         //    utf8Source: ref MemoryMarshal.GetReference<byte>(_utf8Bytes),
         //    utf16Destination: ref MemoryMarshal.GetReference<char>(_utf16Chars));
 
-        [Benchmark(Baseline = true)]
+        //[Benchmark(Baseline = true)]
         public bool Utf8_Is_Valid() => Encoding.UTF8.GetCharCount(_utf8Bytes) >= 0;
 
         [Benchmark]
@@ -469,13 +472,36 @@ namespace ConsoleAppBenchmark
             return true;
         }
 
-        private static readonly Vector256<sbyte> s_3ByteFirstContByteLowerInclusive = Vector256.Create(
-            0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-            0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80).AsSByte();
+        private struct ConstantVectors
+        {
+            internal Vector256<sbyte> s_3ByteFirstContByteLowerInclusive;
+            internal Vector256<sbyte> s_3ByteFirstContByteUpperExclusive;
+            internal Vector256<byte> s_vecAll70;
+            internal Vector256<sbyte> s_vecAllE0;
+        }
 
-        private static readonly Vector256<sbyte> s_3ByteFirstContByteUpperExclusive = Vector256.Create(
-            0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0,
-            0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0).AsSByte();
+        private static readonly ConstantVectors Constants = new ConstantVectors
+        {
+            s_3ByteFirstContByteLowerInclusive = Vector256.Create(
+                0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80).AsSByte(),
+
+            s_3ByteFirstContByteUpperExclusive = Vector256.Create(
+                0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0,
+                0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0).AsSByte(),
+
+            s_vecAll70 = Vector256.Create((byte)0x70),
+
+            s_vecAllE0 = Vector256.Create(unchecked((sbyte)0xE0)),
+        };
+
+        //private static readonly Vector256<sbyte> s_3ByteFirstContByteLowerInclusive = Vector256.Create(
+        //    0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+        //    0xA0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80).AsSByte();
+
+        //private static readonly Vector256<sbyte> s_3ByteFirstContByteUpperExclusive = Vector256.Create(
+        //    0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0,
+        //    0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xA0, 0xC0, 0xC0).AsSByte();
 
         private static readonly Vector256<sbyte> s_4ByteFirstContByteLowerInclusive = Vector256.Create(
             0x90, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -485,8 +511,8 @@ namespace ConsoleAppBenchmark
             0xC0, 0xC0, 0xC0, 0xC0, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0xC0, 0xC0, 0xC0, 0xC0, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00).AsSByte();
 
-        private static readonly Vector256<byte> s_vecAll70 = Vector256.Create((byte)0x70);
-        private static readonly Vector256<sbyte> s_vecAllE0 = Vector256.Create(unchecked((sbyte)0xE0));
+        //private static readonly Vector256<byte> s_vecAll70 = Vector256.Create((byte)0x70);
+        //private static readonly Vector256<sbyte> s_vecAllE0 = Vector256.Create(unchecked((sbyte)0xE0));
         private static readonly Vector256<sbyte> s_vecAllF0 = Vector256.Create(unchecked((sbyte)0xF0));
 
         private static bool IsWellFormedUtf8_Avx2(byte* pBuffer, nuint bufferLength)
@@ -507,6 +533,31 @@ namespace ConsoleAppBenchmark
             Vector256<sbyte> vecAll42 = Vector256.Create(unchecked((sbyte)0x42));
             Vector256<sbyte> vecAll9E = Vector256.Create(unchecked((sbyte)0x9E));
             Vector256<sbyte> vecAllC0 = Vector256.Create(unchecked((sbyte)0xC0));
+
+            //Vector128<sbyte> temp1 = Vector128.Create(unchecked((sbyte)0x80));
+            //Vector128<sbyte> temp2 = Vector128.Create(unchecked((sbyte)0xC0));
+
+            //temp1 = temp1.WithElement(0x00, unchecked((sbyte)0xA0));
+            //temp2 = temp2.WithElement(0x0D, unchecked((sbyte)0xA0));
+
+            //Vector256<sbyte> s_3ByteFirstContByteLowerInclusive =
+            //    Avx2.Permute2x128(temp1.ToVector256Unsafe(), temp1.ToVector256Unsafe(), 0x00);
+
+            //Vector256<sbyte> s_3ByteFirstContByteUpperExclusive =
+            //    Avx2.Permute2x128(temp2.ToVector256Unsafe(), temp2.ToVector256Unsafe(), 0x00);
+
+            //Vector256<sbyte> s_3ByteFirstContByteLowerInclusive = Vector256.Create(unchecked((sbyte)0x80));
+            //s_3ByteFirstContByteLowerInclusive = s_3ByteFirstContByteLowerInclusive.WithElement(0x00, unchecked((sbyte)0xA0));
+            //s_3ByteFirstContByteLowerInclusive = Avx2.Permute2x128(s_3ByteFirstContByteLowerInclusive, s_3ByteFirstContByteLowerInclusive, 0x00);
+            //s_3ByteFirstContByteLowerInclusive = s_3ByteFirstContByteLowerInclusive.WithElement(0x10, unchecked((sbyte)0xA0));
+
+            //Vector256<sbyte> s_3ByteFirstContByteUpperExclusive = Vector256.Create(unchecked((sbyte)0xC0));
+            //s_3ByteFirstContByteUpperExclusive = s_3ByteFirstContByteUpperExclusive.WithElement(0x0D, unchecked((sbyte)0xA0));
+            //s_3ByteFirstContByteUpperExclusive = Avx2.Permute2x128(s_3ByteFirstContByteUpperExclusive, s_3ByteFirstContByteUpperExclusive, 0x00);
+            // s_3ByteFirstContByteUpperExclusive = s_3ByteFirstContByteUpperExclusive.WithElement(0x1D, unchecked((sbyte)0xA0));
+
+            //    Vector256<byte> s_vecAll70 = Vector256.Create((byte)0x70);
+            //Vector256<sbyte> s_vecAllE0 = Vector256.Create(unchecked((sbyte)0xE0));
 
             while ((nint)bufferLength >= sizeof(Vector256<sbyte>))
             {
@@ -570,13 +621,15 @@ namespace ConsoleAppBenchmark
                     // Since this sets the high bit, the pshufb operation will set the destination to 0.
                     // n.b. we use unsigned saturation below.
 
-                    Vector256<sbyte> tempSaturated = Avx2.AddSaturate(Avx2.Subtract(data, s_vecAllE0).AsByte(), s_vecAll70).AsSByte();
+                    Vector256<sbyte> tempSaturated = Avx2.AddSaturate(Avx2.Subtract(data, Constants.s_vecAllE0).AsByte(), Constants.s_vecAll70).AsSByte();
+
+
 
                     Vector256<sbyte> failsLowerBoundInclusive =
-                        Avx2.CompareGreaterThan(Avx2.Shuffle(s_3ByteFirstContByteLowerInclusive, tempSaturated), dataRightShiftedOne);
+                        Avx2.CompareGreaterThan(Avx2.Shuffle(Constants.s_3ByteFirstContByteLowerInclusive, tempSaturated), dataRightShiftedOne);
 
                     Vector256<sbyte> satisfiesUpperBoundExclusive =
-                        Avx2.CompareGreaterThan(Avx2.Shuffle(s_3ByteFirstContByteUpperExclusive, tempSaturated), dataRightShiftedOne);
+                        Avx2.CompareGreaterThan(Avx2.Shuffle(Constants.s_3ByteFirstContByteUpperExclusive, tempSaturated), dataRightShiftedOne);
 
                     uint threeByteHeaderMask = (uint)Avx2.MoveMask(Avx2.AndNot(failsLowerBoundInclusive, satisfiesUpperBoundExclusive));
                     threeByteHeaderMask &= contByteMask; // = 1 if the byte at this index begins a valid 3-byte sequence
@@ -596,36 +649,36 @@ namespace ConsoleAppBenchmark
                 // After accounting for ASCII chars and 2- and 3-byte sequences, there are still gaps.
                 // Perhaps there's a 4-byte sequence somewhere in the buffer?
 
-                contByteMask >>= 1;
+                //contByteMask >>= 1;
 
-                {
-                    // Similar to the 3-byte logic above, but normalizes [ F0 .. FF ] to [ 70 .. 7F ]
-                    // and bumps all other bytes up to [ 80 .. FF ] due to unsigned saturation.
+                //{
+                //    // Similar to the 3-byte logic above, but normalizes [ F0 .. FF ] to [ 70 .. 7F ]
+                //    // and bumps all other bytes up to [ 80 .. FF ] due to unsigned saturation.
 
-                    Vector256<sbyte> tempSaturated = Avx2.AddSaturate(Avx2.Subtract(data, s_vecAllF0).AsByte(), s_vecAll70).AsSByte();
+                //    Vector256<sbyte> tempSaturated = Avx2.AddSaturate(Avx2.Subtract(data, s_vecAllF0).AsByte(), s_vecAll70).AsSByte();
 
-                    Vector256<sbyte> failsLowerBoundInclusive =
-                        Avx2.CompareGreaterThan(Avx2.Shuffle(s_4ByteFirstContByteLowerInclusive, tempSaturated), dataRightShiftedOne);
+                //    Vector256<sbyte> failsLowerBoundInclusive =
+                //        Avx2.CompareGreaterThan(Avx2.Shuffle(s_4ByteFirstContByteLowerInclusive, tempSaturated), dataRightShiftedOne);
 
-                    Vector256<sbyte> satisfiesUpperBoundExclusive =
-                        Avx2.CompareGreaterThan(Avx2.Shuffle(s_4ByteFirstContByteUpperExclusive, tempSaturated), dataRightShiftedOne);
+                //    Vector256<sbyte> satisfiesUpperBoundExclusive =
+                //        Avx2.CompareGreaterThan(Avx2.Shuffle(s_4ByteFirstContByteUpperExclusive, tempSaturated), dataRightShiftedOne);
 
-                    uint fourByteHeaderMask = (uint)Avx2.MoveMask(Avx2.AndNot(failsLowerBoundInclusive, satisfiesUpperBoundExclusive));
-                    fourByteHeaderMask &= contByteMask; // = 1 if the byte at this index begins a valid 4-byte sequence
+                //    uint fourByteHeaderMask = (uint)Avx2.MoveMask(Avx2.AndNot(failsLowerBoundInclusive, satisfiesUpperBoundExclusive));
+                //    fourByteHeaderMask &= contByteMask; // = 1 if the byte at this index begins a valid 4-byte sequence
 
-                    combinedMask += fourByteHeaderMask * 16; // fast combinedMask += threeByteHeaderMask * 15
-                    combinedMask -= fourByteHeaderMask;
+                //    combinedMask += fourByteHeaderMask * 16; // fast combinedMask += threeByteHeaderMask * 15
+                //    combinedMask -= fourByteHeaderMask;
 
-                    if ((combinedMask & 0x1FFF_FFFF) == 0)
-                    {
-                        nuint stride = (uint)BitOperations.TrailingZeroCount(combinedMask);
-                        pBuffer += stride;
-                        bufferLength -= stride;
-                        continue;
-                    }
+                //    if ((combinedMask & 0x1FFF_FFFF) == 0)
+                //    {
+                //        nuint stride = (uint)BitOperations.TrailingZeroCount(combinedMask);
+                //        pBuffer += stride;
+                //        bufferLength -= stride;
+                //        continue;
+                //    }
+                //}
 
-                    return false; // we saw bad data somewhere
-                }
+                return false; // we saw bad data somewhere
             }
 
             return true;

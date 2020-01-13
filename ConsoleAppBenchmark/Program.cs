@@ -19,32 +19,37 @@ namespace ConsoleAppBenchmark
         {
             public LocalCoreClrConfig()
             {
-                AddCustom30Toolchain(
+                AddCustom50Toolchain(
                     coreRunDirectory: @"C:\Users\levib\Desktop\experiments\master",
                     displayName: "master",
                     isBaseline: true);
 
-                //AddCustom30Toolchain(
+                AddCustom50Toolchain(
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
+                    displayName: "proto",
+                    isBaseline: false);
+
+                //AddCustom50Toolchain(
                 //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
                 //    displayName: "proto",
                 //    isBaseline: false);
 
-                //AddCustom30Toolchain(
+                //AddCustom50Toolchain(
                 //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto2",
                 //    displayName: "proto2",
                 //    isBaseline: true);
 
-                //AddCustom30Toolchain(
+                //AddCustom50Toolchain(
                 //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto3",
                 //   displayName: "proto3",
                 //   isBaseline: false);
 
-                //AddCustom30Toolchain(
+                //AddCustom50Toolchain(
                 //  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto2",
                 //  displayName: "proto2",
                 //  isBaseline: false);
 
-                //AddCustom30Toolchain(
+                //AddCustom50Toolchain(
                 //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_test_no_hi",
                 //   displayName: "without_intrin",
                 //   isasToSuppress: "AVX2");
@@ -56,11 +61,11 @@ namespace ConsoleAppBenchmark
                 // Add(DisassemblyDiagnoser.Create(new DisassemblyDiagnoserConfig(printAsm: true, recursiveDepth: 2)));
             }
 
-            private void AddCustom30Toolchain(string coreRunDirectory, string displayName, bool enableTieredCompilation = true, bool isBaseline = false, Dictionary<string, string> envVars = default)
+            private void AddCustom50Toolchain(string coreRunDirectory, string displayName, bool enableTieredCompilation = true, bool isBaseline = false, Dictionary<string, string> envVars = default)
             {
                 var toolchain = new CoreRunToolchain(
                     coreRun: new DirectoryInfo(coreRunDirectory).GetFiles("CoreRun.exe").Single(),
-                    targetFrameworkMoniker: "netcoreapp3.0",
+                    targetFrameworkMoniker: "netcoreapp5.0",
                     displayName: displayName);
 
                 // var job = Job.ShortRun.With(toolchain);
@@ -92,7 +97,7 @@ namespace ConsoleAppBenchmark
                 Add(job);
             }
 
-            private void AddCustom30Toolchain(string coreRunDirectory, string displayName, params string[] isasToSuppress)
+            private void AddCustom50Toolchain(string coreRunDirectory, string displayName, params string[] isasToSuppress)
             {
                 Dictionary<string, string> envVars = new Dictionary<string, string>();
                 foreach (string isa in isasToSuppress)
@@ -100,7 +105,7 @@ namespace ConsoleAppBenchmark
                     envVars["COMPLUS_ENABLE" + isa.ToUpperInvariant()] = "0";
                 }
 
-                AddCustom30Toolchain(coreRunDirectory, displayName, envVars: envVars);
+                AddCustom50Toolchain(coreRunDirectory, displayName, envVars: envVars);
             }
         }
 
@@ -121,10 +126,13 @@ namespace ConsoleAppBenchmark
             //    runner.GetString_FromByteArray();
             //}
 
+            // var summary = BenchmarkRunner.Run<SpanTrimRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Utf8ValidationRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SliceRunner>(new LocalCoreClrConfig());
-            // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
-            var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
+            var summary1= BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<RegexRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<CharUnicodeInfoRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<BitManipulaitonRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StringHashCodeRunner>(new LocalCoreClrConfig());
