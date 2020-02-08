@@ -25,9 +25,26 @@ namespace ConsoleAppBenchmark
                     isBaseline: true);
 
                 AddCustom50Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
-                    displayName: "proto",
-                    isBaseline: false);
+                  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\protostring",
+                  displayName: "proto",
+                  isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\protostring",
+                //    displayName: "protostring",
+                //    // enableTieredCompilation: false,
+                //    isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
+                //    displayName: "proto",
+                //    // enableTieredCompilation: false,
+                //    // envVars: new Dictionary<string, string>
+                //    // {
+                //    //     ["COMPLUS_JITDUMP"] = "System.Char::*",
+                //    //     ["COMPLUS_READYTORUN"] = "0",
+                //    // },
+                //    isBaseline: false);
 
                 //AddCustom50Toolchain(
                 //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
@@ -86,7 +103,7 @@ namespace ConsoleAppBenchmark
                 {
                     foreach (var (key, value) in envVars)
                     {
-                        job = job.With(new[] { new EnvironmentVariable(key, value) });
+                        job = job.With(new EnvironmentVariable(key, value));
                     }
                 }
 
@@ -97,7 +114,7 @@ namespace ConsoleAppBenchmark
                 Add(job);
             }
 
-            private void AddCustom50Toolchain(string coreRunDirectory, string displayName, params string[] isasToSuppress)
+            private void AddCustom50Toolchain(string coreRunDirectory, string displayName, bool isBaseline = false, params string[] isasToSuppress)
             {
                 Dictionary<string, string> envVars = new Dictionary<string, string>();
                 foreach (string isa in isasToSuppress)
@@ -105,7 +122,7 @@ namespace ConsoleAppBenchmark
                     envVars["COMPLUS_ENABLE" + isa.ToUpperInvariant()] = "0";
                 }
 
-                AddCustom50Toolchain(coreRunDirectory, displayName, envVars: envVars);
+                AddCustom50Toolchain(coreRunDirectory, displayName, isBaseline: isBaseline, envVars: envVars);
             }
         }
 
@@ -129,13 +146,15 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<SpanTrimRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Utf8ValidationRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SliceRunner>(new LocalCoreClrConfig());
-            var summary1= BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<RegexRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<CharUnicodeInfoRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<BitManipulaitonRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StringHashCodeRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<StringCtorRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<TranscodingRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());

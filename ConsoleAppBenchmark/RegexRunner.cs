@@ -15,10 +15,10 @@ namespace ConsoleAppBenchmark
 
         public static IEnumerable<object> IsMatchArguments()
         {
-            yield return "";
+            // yield return "";
             yield return "你好";
-            yield return "Κρόνος";
-            yield return " banana ";
+            // yield return " Κρόνος ";
+            //yield return " banana ";
         }
     }
 }
