@@ -9,14 +9,18 @@ using System.Text.Unicode;
 
 namespace ConsoleAppBenchmark
 {
+    [DisassemblyDiagnoser(recursiveDepth: 5)]
     public class TranscodingRunner
     {
         private const string SampleTextsFolder = @"C:\Users\levib\source\repos\fast-utf8\FastUtf8Tester\SampleTexts\";
 
         private byte[] _dataAsUtf8;
         private char[] _dataAsUtf16;
+        private string _dataAsUtf16Str;
 
-        [Params("11.txt", "11-0.txt", "25249-0.txt", "30774-0.txt", "39251-0.txt")]
+        // [Params("11.txt", "11-0.txt", "25249-0.txt", "30774-0.txt", "39251-0.txt")]
+        // [Params("11.txt", "11-0.txt")]
+        [Params("11.txt")]
         public string Corpus;
 
         [GlobalSetup]
@@ -30,6 +34,7 @@ namespace ConsoleAppBenchmark
             }
 
             _dataAsUtf16 = Encoding.UTF8.GetChars(_dataAsUtf8);
+            _dataAsUtf16Str = new string(_dataAsUtf16);
 
             //byte[] utf8Bytes = Encoding.UTF8.GetBytes(_dataAsUtf16);
             //if (_dataAsUtf8.Length != utf8Bytes.Length)
@@ -59,12 +64,18 @@ namespace ConsoleAppBenchmark
             ArrayPool<byte>.Shared.Return(rented);
         }
 
-        [Benchmark]
-        public void TranscodeUtf8ToUtf16()
-        {
-            char[] rented = ArrayPool<char>.Shared.Rent(_dataAsUtf16.Length);
-            Encoding.UTF8.GetChars(_dataAsUtf8, rented);
-            ArrayPool<char>.Shared.Return(rented);
-        }
+        //[Benchmark]
+        //public void TranscodeUtf8ToUtf16()
+        //{
+        //    char[] rented = ArrayPool<char>.Shared.Rent(_dataAsUtf16.Length);
+        //    Encoding.UTF8.GetChars(_dataAsUtf8, rented);
+        //    ArrayPool<char>.Shared.Return(rented);
+        //}
+
+        //[Benchmark]
+        //public int CountUtf8Bytes()
+        //{
+        //    return Encoding.UTF8.GetByteCount(_dataAsUtf16Str);
+        //}
     }
 }

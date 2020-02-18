@@ -19,15 +19,30 @@ namespace ConsoleAppBenchmark
         {
             public LocalCoreClrConfig()
             {
-                AddCustom50Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\master",
-                    displayName: "master",
-                    isBaseline: true);
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\master",
+                //    displayName: "master",
+                //    isBaseline: true);
+
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\wstrcpy_2",
+                //    displayName: "wstrcpy_2",
+                //    isBaseline: false);
 
                 AddCustom50Toolchain(
-                  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\protostring",
-                  displayName: "proto",
-                  isBaseline: false);
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\objectfactory",
+                    displayName: "objectfactory",
+                    isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\default_t",
+                //    displayName: "default_t",
+                //    isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\toupper_tolower",
+                //  displayName: "toupper_tolower",
+                //  isBaseline: false);
 
                 //AddCustom50Toolchain(
                 //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\protostring",
@@ -85,8 +100,8 @@ namespace ConsoleAppBenchmark
                     targetFrameworkMoniker: "netcoreapp5.0",
                     displayName: displayName);
 
-                // var job = Job.ShortRun.With(toolchain);
-                var job = Job.Default.With(toolchain);
+                var job = Job.ShortRun.With(toolchain);
+                // var job = Job.Default.With(toolchain);
 
                 if (isBaseline)
                 {
@@ -154,7 +169,10 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StringHashCodeRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StringCtorRunner>(new LocalCoreClrConfig());
-            var summary = BenchmarkRunner.Run<TranscodingRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<TranscodingRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<StrCpyRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<ObjectFactoryRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<StringRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SpanRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Runner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<AsciiRunner>(new LocalCoreClrConfig());
