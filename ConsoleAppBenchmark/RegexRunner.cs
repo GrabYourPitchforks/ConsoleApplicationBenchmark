@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace ConsoleAppBenchmark
 {
-    [DisassemblyDiagnoser(recursiveDepth: 10)]
+    [DisassemblyDiagnoser]
     public class RegexRunner
     {
         private readonly Regex _regex = new Regex(@"\w+");

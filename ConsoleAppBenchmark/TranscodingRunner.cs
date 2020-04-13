@@ -9,7 +9,7 @@ using System.Text.Unicode;
 
 namespace ConsoleAppBenchmark
 {
-    [DisassemblyDiagnoser(recursiveDepth: 5)]
+    [DisassemblyDiagnoser]
     public class TranscodingRunner
     {
         private const string SampleTextsFolder = @"C:\Users\levib\source\repos\fast-utf8\FastUtf8Tester\SampleTexts\";

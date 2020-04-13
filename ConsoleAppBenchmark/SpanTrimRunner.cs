@@ -5,7 +5,7 @@ using BenchmarkDotNet.Attributes;
 
 namespace ConsoleAppBenchmark
 {
-    [DisassemblyDiagnoser(recursiveDepth: 3)]
+    [DisassemblyDiagnoser]
     public class SpanTrimRunner
     {
         [ParamsSource(nameof(TrimArguments))]

@@ -9,7 +9,7 @@ using BenchmarkDotNet.Attributes;
 namespace ConsoleAppBenchmark
 {
     //[MemoryDiagnoser]
-    [DisassemblyDiagnoser(recursiveDepth: 3)]
+    [DisassemblyDiagnoser]
     public class StringCtorRunner
     {
         private readonly char[] _chars = new char[] { 'h', 'e', 'l', 'l', 'o' };

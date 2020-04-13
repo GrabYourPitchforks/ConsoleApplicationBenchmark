@@ -11,7 +11,7 @@ using BenchmarkDotNet.Attributes;
 
 namespace ConsoleAppBenchmark
 {
-    [DisassemblyDiagnoser(recursiveDepth: 3)]
+    [DisassemblyDiagnoser]
     public class StringHashCodeRunner
     {
         private delegate int HashCodeRoutine(string s);

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ConsoleAppBenchmark
 {
-    [DisassemblyDiagnoser(recursiveDepth: 10)]
+    [DisassemblyDiagnoser]
     public class CharRunner
     {
         [Benchmark]

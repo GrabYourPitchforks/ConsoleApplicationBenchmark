@@ -11,10 +11,12 @@ using Microsoft.VisualBasic.CompilerServices;
 namespace ConsoleAppBenchmark
 {
     //[MemoryDiagnoser]
-    [DisassemblyDiagnoser(recursiveDepth: 3)]
+    // [DisassemblyDiagnoser(recursiveDepth: 3)]
     public class ObjectFactoryRunner
     {
+        private readonly Type _objType = typeof(object);
         private Func<object> _dmFactory;
+        private Func<object> _uninitObjFactory;
         private Func<object> _objFactory;
         private Func<object> _doNothing;
 
@@ -23,38 +25,71 @@ namespace ConsoleAppBenchmark
         {
             _dmFactory = CreateDynamicMethodFactory<object>();
 
-            var t = typeof(object).Assembly.GetType("System.Reflection.ObjectFactory`1");
-            t = t.MakeGenericType(typeof(object));
-            var mi = t.GetMethod("CreateObject");
-            var del = mi.CreateDelegate(typeof(Func<object>), Activator.CreateInstance(t));
+            {
+                var t = typeof(object).Assembly.GetType("System.Reflection.ObjectFactory`1");
+                t = t.MakeGenericType(typeof(object));
+                var mi = t.GetMethod("CreateInstance");
+                var del = mi.CreateDelegate(typeof(Func<object>), Activator.CreateInstance(t, nonPublic: true));
+                _objFactory = (Func<object>)del;
+            }
 
-            _objFactory = (Func<object>)del;
+            {
+                var t = typeof(object).Assembly.GetType("System.Reflection.UninitializedObjectFactory`1");
+                t = t.MakeGenericType(typeof(object));
+                var mi = t.GetMethod("CreateUninitializedInstance");
+                var del = mi.CreateDelegate(typeof(Func<object>), Activator.CreateInstance(t, nonPublic: true));
+                _uninitObjFactory = (Func<object>)del;
+            }
 
             _doNothing = CreateDoNothingFactory();
         }
 
+        //[Benchmark(Baseline = true)]
+        //public object DirectNewobj()
+        //{
+        //    return new object();
+        //}
+
+        //[Benchmark]
+        //public object DynamicMethodNewobj()
+        //{
+        //    return _dmFactory();
+        //}
+
+        //[Benchmark]
+        //public object ActivatorCreateInstance()
+        //{
+        //    return Activator.CreateInstance(_objType);
+        //}
+
+        //[Benchmark]
+        //public object ActivatorCreateInstanceOfT()
+        //{
+        //    return Activator.CreateInstance<object>();
+        //}
+
+        //[Benchmark]
+        //public object ObjectFactoryCreateInstance()
+        //{
+        //    return _objFactory();
+        //}
+
+        //[Benchmark]
+        //public object DoNothing()
+        //{
+        //    return _doNothing();
+        //}
+
         [Benchmark(Baseline = true)]
-        public object DirectNewobj()
+        public object RH_GetUninitializedObject()
         {
-            return new object();
+            return RuntimeHelpers.GetUninitializedObject(_objType);
         }
 
         [Benchmark]
-        public object DynamicMethodNewobj()
+        public object UninitializedObjectFactory_CreateInstance()
         {
-            return _dmFactory();
-        }
-
-        [Benchmark]
-        public object ActivatorCreateInstance_Old()
-        {
-            return Activator.CreateInstance(typeof(object));
-        }
-
-        [Benchmark]
-        public object ActivatorCreateInstance_New()
-        {
-            return _objFactory();
+            return _uninitObjFactory();
         }
 
         [Benchmark]
