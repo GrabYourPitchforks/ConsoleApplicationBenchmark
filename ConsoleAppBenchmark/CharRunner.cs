@@ -7,6 +7,30 @@ namespace ConsoleAppBenchmark
     public class CharRunner
     {
         [Benchmark]
+        [Arguments("Hello World!")]
+        public int CharToUpperInvariant(string args)
+        {
+            int accum = 0;
+            for (int i = 0; i < args.Length; i++)
+            {
+                accum += char.ToUpperInvariant(args[i]);
+            }
+            return accum;
+        }
+
+        [Benchmark]
+        [Arguments("Hello World!")]
+        public int CharToLowerInvariant(string args)
+        {
+            int accum = 0;
+            for (int i = 0; i < args.Length; i++)
+            {
+                accum += char.ToLowerInvariant(args[i]);
+            }
+            return accum;
+        }
+
+        // [Benchmark]
         [ArgumentsSource(nameof(TrimArguments))]
         public bool IsNullOrWhiteSpace(string input) => string.IsNullOrWhiteSpace(input);
 

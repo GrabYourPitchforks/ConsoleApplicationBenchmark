@@ -24,10 +24,25 @@ namespace ConsoleAppBenchmark
                     displayName: "master",
                     isBaseline: true);
 
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\activator",
+                //    displayName: "proto",
+                //    isBaseline: false);
+
                 AddCustom50Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\latin1",
-                    displayName: "proto",
-                    isBaseline: false);
+                   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode",
+                   displayName: "hashcode",
+                   isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\memmove",
+                //   displayName: "memmove",
+                //   isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\textinfo",
+                //    displayName: "textinfo",
+                //    isBaseline: false);
 
                 //AddCustom50Toolchain(
                 //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8tryparse_2",
@@ -237,18 +252,22 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<Utf8ValidationRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SliceRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<CharRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<ArrayRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<ActivatorRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<DictionaryRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<HexRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<RegexRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<CharUnicodeInfoRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<BitManipulaitonRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
-            // var summary = BenchmarkRunner.Run<StringHashCodeRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<StringHashCodeRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StringCtorRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<TranscodingRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StrCpyRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<ObjectFactoryRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<CopyToRunner<string>>(new LocalCoreClrConfig());
-            var summary = BenchmarkRunner.Run<Latin1GetCharsRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<Latin1GetCharsRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Latin1GetBytesRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Utf8ParserRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<BinaryReaderRunner>(new LocalCoreClrConfig());
