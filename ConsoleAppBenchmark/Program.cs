@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
@@ -24,15 +25,15 @@ namespace ConsoleAppBenchmark
                     displayName: "master",
                     isBaseline: true);
 
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\activator",
-                //    displayName: "proto",
-                //    isBaseline: false);
-
                 AddCustom50Toolchain(
-                   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode",
-                   displayName: "hashcode",
-                   isBaseline: false);
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
+                    displayName: "proto",
+                    isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode",
+                //   displayName: "hashcode",
+                //   isBaseline: false);
 
                 //AddCustom50Toolchain(
                 //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\memmove",
@@ -231,8 +232,15 @@ namespace ConsoleAppBenchmark
             }
         }
 
+        private static void Run<T>()
+        {
+            BenchmarkRunner.Run<T>(new LocalCoreClrConfig());
+        }
+
         static void Main(string[] args)
         {
+            Run<DictionaryRunner>();
+
             //Utf8StringRunner runner = new Utf8StringRunner();
             //runner.Corpus = "25249-0.txt";
             //runner.Setup();
@@ -261,7 +269,9 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<BitManipulaitonRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
-            var summary = BenchmarkRunner.Run<StringHashCodeRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<FieldInfoLookupRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<StrHashRunner2>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<StringHashCodeRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StringCtorRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<TranscodingRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StrCpyRunner>(new LocalCoreClrConfig());
