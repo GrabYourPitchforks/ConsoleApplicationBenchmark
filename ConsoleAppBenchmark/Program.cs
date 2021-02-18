@@ -25,157 +25,17 @@ namespace ConsoleAppBenchmark
                     displayName: "master",
                     isBaseline: true);
 
-                AddCustom50Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
-                    displayName: "proto",
-                    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\hashcode",
-                //   displayName: "hashcode",
-                //   isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\memmove",
-                //   displayName: "memmove",
-                //   isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\textinfo",
-                //    displayName: "textinfo",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8tryparse_2",
-                //    displayName: "utf8tryparse_2",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //     coreRunDirectory: @"C:\Users\levib\Desktop\experiments\binaryreader_fix",
-                //     displayName: "binaryreader_fix",
-                //     isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\latin1",
-                //    displayName: "latin1",
-                //    isBaseline: true);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\latin2_imp",
-                //    displayName: "latin1_memaddr",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8parser",
-                //    displayName: "utf8parser",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_base",
-                //    displayName: "ascii_base",
-                //    isBaseline: true);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_testa",
-                //    displayName: "ascii_testa",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_testb",
-                //   displayName: "ascii_testb",
-                //   isBaseline: false);
-
-                //AddCustom50Toolchain(
-                // coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_testc",
-                // displayName: "ascii_testc",
-                // isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_testd",
-                //displayName: "ascii_testd",
-                //isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_teste",
-                //    displayName: "ascii_teste",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_testf",
-                //displayName: "ascii_testf",
-                //isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_testg",
-                //    displayName: "ascii_testg",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8parser_1",
-                //    displayName: "utf8parser_1",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                // coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf8parser_2",
-                // displayName: "utf8parser_2",
-                // isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\objectfactory",
-                //    displayName: "objectfactory",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\default_t",
-                //    displayName: "default_t",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\toupper_tolower",
-                //  displayName: "toupper_tolower",
-                //  isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\protostring",
-                //    displayName: "protostring",
-                //    // enableTieredCompilation: false,
-                //    isBaseline: false);
-
                 //AddCustom50Toolchain(
                 //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
-                //    displayName: "proto",
-                //    // enableTieredCompilation: false,
-                //    // envVars: new Dictionary<string, string>
-                //    // {
-                //    //     ["COMPLUS_JITDUMP"] = "System.Char::*",
-                //    //     ["COMPLUS_READYTORUN"] = "0",
-                //    // },
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
-                //    displayName: "proto",
-                //    isBaseline: false);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto2",
-                //    displayName: "proto2",
+                //    displayName: "pr64k",
                 //    isBaseline: true);
 
                 //AddCustom50Toolchain(
-                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto3",
-                //   displayName: "proto3",
-                //   isBaseline: false);
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto32",
+                //    displayName: "pr32k",
+                //    isBaseline: false);
 
-                //AddCustom50Toolchain(
-                //  coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto2",
-                //  displayName: "proto2",
-                //  isBaseline: false);
 
-                //AddCustom50Toolchain(
-                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\ascii_test_no_hi",
-                //   displayName: "without_intrin",
-                //   isasToSuppress: "AVX2");
 
                 AddExporter(DefaultConfig.Instance.GetExporters().ToArray());
                 AddLogger(DefaultConfig.Instance.GetLoggers().ToArray());
@@ -193,6 +53,43 @@ namespace ConsoleAppBenchmark
 
                 // var job = Job.ShortRun.With(toolchain);
                 var job = Job.Default.WithToolchain(toolchain);
+
+                if (isBaseline)
+                {
+                    job = job.AsBaseline();
+                }
+
+                if (!enableTieredCompilation)
+                {
+                    envVars ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    envVars["COMPLUS_TieredCompilation"] = "0";
+                }
+
+                if (envVars != null)
+                {
+                    foreach (var (key, value) in envVars)
+                    {
+                        job = job.WithEnvironmentVariable(key, value);
+                    }
+                }
+
+                // job = job.With(new[] { new EnvironmentVariable("COMPLUS_TieredCompilation", "0") });
+
+                // job = job.WithWarmupCount(10);
+
+                AddJob(job);
+            }
+
+            private void AddCustom60Toolchain(string coreRunDirectory, string displayName, bool enableTieredCompilation = true, bool isBaseline = false, Dictionary<string, string> envVars = default)
+            {
+                var toolchain = new CoreRunToolchain(
+                    coreRun: new DirectoryInfo(coreRunDirectory).GetFiles("CoreRun.exe").Single(),
+                    targetFrameworkMoniker: "net6.0",
+                    displayName: displayName);
+
+                // var job = Job.ShortRun.With(toolchain);
+                var job = Job.Default.WithToolchain(toolchain);
+                // var job = Job.LongRun.With(toolchain);
 
                 if (isBaseline)
                 {
@@ -239,7 +136,8 @@ namespace ConsoleAppBenchmark
 
         static void Main(string[] args)
         {
-            Run<DictionaryRunner>();
+            // Run<SpanClearRunner>();
+            // BenchmarkRunner.Run<GuidRunner>();
 
             //Utf8StringRunner runner = new Utf8StringRunner();
             //runner.Corpus = "25249-0.txt";
@@ -256,6 +154,12 @@ namespace ConsoleAppBenchmark
             //    runner.GetString_FromByteArray();
             //}
 
+            BenchmarkRunner.Run<Utf8Scenarios>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<ActivatorRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<Sha1Runner>(new LocalCoreClrConfig());
+            // BenchmarkRunner.Run<BinaryWriterRunner>(new LocalCoreClrConfig());
+            // BenchmarkRunner.Run<BinaryWriterRunner_Extended>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<DateTimeRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SpanTrimRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Utf8ValidationRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SliceRunner>(new LocalCoreClrConfig());

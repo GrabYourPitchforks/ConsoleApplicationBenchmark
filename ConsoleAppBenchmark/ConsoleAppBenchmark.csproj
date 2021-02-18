@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.12.1" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0-preview.5.20278.1" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
     <!--<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0-preview.2.20160.6" />
     <PackageReference Include="System.Text.Encodings.Web" Version="5.0.0-preview.2.20160.6" />-->
     <!--<PackageReference Include="System.Utf8String.Experimental" Version="3.0.0-preview6.19223.2" />-->
