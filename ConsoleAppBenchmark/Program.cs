@@ -21,21 +21,14 @@ namespace ConsoleAppBenchmark
             public LocalCoreClrConfig()
             {
                 AddCustom50Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\master",
-                    displayName: "master",
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\main",
+                    displayName: "main",
                     isBaseline: true);
 
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
-                //    displayName: "pr64k",
-                //    isBaseline: true);
-
-                //AddCustom50Toolchain(
-                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto32",
-                //    displayName: "pr32k",
-                //    isBaseline: false);
-
-
+                AddCustom50Toolchain(
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\encoder",
+                    displayName: "encoder",
+                    isBaseline: false);
 
                 AddExporter(DefaultConfig.Instance.GetExporters().ToArray());
                 AddLogger(DefaultConfig.Instance.GetLoggers().ToArray());
@@ -154,7 +147,10 @@ namespace ConsoleAppBenchmark
             //    runner.GetString_FromByteArray();
             //}
 
-            BenchmarkRunner.Run<Utf8Scenarios>(new LocalCoreClrConfig());
+            BenchmarkRunner.Run<TextEncoderRunner>(new LocalCoreClrConfig());
+            // BenchmarkRunner.Run<TwitterJsonRunner>(new LocalCoreClrConfig());
+            // BenchmarkRunner.Run<SpanFwdRunner>(new LocalCoreClrConfig());
+            // BenchmarkRunner.Run<Utf8Scenarios>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<ActivatorRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Sha1Runner>(new LocalCoreClrConfig());
             // BenchmarkRunner.Run<BinaryWriterRunner>(new LocalCoreClrConfig());
