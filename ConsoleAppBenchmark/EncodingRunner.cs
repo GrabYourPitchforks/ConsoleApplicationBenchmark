@@ -1,13 +1,12 @@
-﻿using System;
-using System.Buffers;
+﻿using BenchmarkDotNet.Attributes;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
-using BenchmarkDotNet.Attributes;
 
 namespace ConsoleAppBenchmark
 {
-    public class EncodingRunner
+    public unsafe class EncodingRunner
     {
         private const string SampleTextsFolder = @"C:\Users\levib\source\repos\fast-utf8\FastUtf8Tester\SampleTexts\";
 
@@ -15,11 +14,7 @@ namespace ConsoleAppBenchmark
         private byte[] _utf8Data;
         private string _utf16Data;
 
-        // [Params("11.txt", "11-0.txt", "25249-0.txt", "30774-0.txt", "39251-0.txt")]
-        // [Params("11-0.txt", "30774-0.txt", "39251-0.txt")]
-        [Params("11.txt")]
-        // [Params("39251-0.txt")]
-        // [Params("25249-0.txt")]
+        [Params("11.txt", "11-0.txt", "25249-0.txt", "30774-0.txt", "39251-0.txt")]
         public string Corpus;
 
         //[Params("", "Hello", "Hello world!", "Γεια σου κόσμε", "Nǐhǎo 你好", "Lorem ipsum dolor sit amet, consectetur adipiscing elit.")]
@@ -75,23 +70,31 @@ namespace ConsoleAppBenchmark
         //    return charCount;
         //}
 
+        //[Benchmark]
+        //public int GetChars()
+        //{
+        //    byte[] utf8Data = _utf8Data;
+        //    int utf8Length = utf8Data.Length;
+
+        //    // Rent an array instead of allocating an array
+        //    char[] rented = ArrayPool<char>.Shared.Rent(utf8Length * 3);
+        //    _ = rented.Length;
+
+        //    int written = 0;
+        //    for (int i = ITER_COUNT; i > 0; i--)
+        //    {
+        //        written = Encoding.UTF8.GetChars(utf8Data, rented);
+        //    }
+
+        //    return written;
+        //}
+
+        private static readonly UTF8Encoding _encoding = new UTF8Encoding(false, true);
+
         [Benchmark]
-        public int GetChars()
+        public int GetByteCount()
         {
-            byte[] utf8Data = _utf8Data;
-            int utf8Length = utf8Data.Length;
-
-            // Rent an array instead of allocating an array
-            char[] rented = ArrayPool<char>.Shared.Rent(utf8Length * 3);
-            _ = rented.Length;
-
-            int written = 0;
-            for (int i = ITER_COUNT; i > 0; i--)
-            {
-                written = Encoding.UTF8.GetChars(utf8Data, rented);
-            }
-
-            return written;
+            return Encoding.UTF8.GetByteCount(_utf16Data);
         }
 
         //[Benchmark(Baseline = true)]
@@ -212,7 +215,7 @@ namespace ConsoleAppBenchmark
                 _utf8Data = _utf8Data.AsSpan(3).ToArray();
             }
 
-            //_utf16Data = Encoding.UTF8.GetString(_utf8Data);
+            _utf16Data = Encoding.UTF8.GetString(_utf8Data);
 
             // _utf8Data = new byte[32];
             // _utf8Data = Encoding.UTF8.GetBytes(Text);

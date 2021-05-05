@@ -1,37 +1,65 @@
 ﻿using BenchmarkDotNet.Attributes;
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace ConsoleAppBenchmark
 {
-    public class ArrayRunner
+    public unsafe class ArrayRunner
     {
-        private int[] _ints;
+        // [Params(4096)]
+        [Params(0, 16, 64, 1024, 4096)]
+        public int ArrLen { get; set; }
 
-        [Params(0, 1, 4, 12, 24, 128)]
-        public int ArrayLength { get; set; }
+        private byte[] _arr;
+
+        private delegate* managed<Array, int, int, void> _calli1;
+        private delegate* managed<Array, void> _calli2;
 
         [GlobalSetup]
         public void Setup()
         {
-            _ints = Enumerable.Range(0, 32).ToArray();
+            _arr = new byte[ArrLen];
+
+            _calli1 = &Array.Clear;
+
+            var mi = typeof(Array).GetMethod("Clear", BindingFlags.NonPublic | BindingFlags.Static, null, new Type[] { typeof(Array) }, null);
+            // if (mi is not null)
+            {
+                for (int i = 0; i < 1000; i++)
+                    mi.Invoke(null, new object[] { new object[0] }); // ensure JITted
+
+                _calli2 = (delegate* managed<Array, void>)mi.MethodHandle.GetFunctionPointer();
+            }
         }
 
-        [Benchmark]
-        public int[] ArrResize()
-        {
-            int[] ints = _ints;
-            Array.Resize(ref ints, ArrayLength);
-            return ints;
-        }
+        //[Benchmark]
+        //public void DoIt()
+        //{
+        //    int len = _arr.Length;
+        //    Unsafe.InitBlockUnaligned(ref MemoryMarshal.GetArrayDataReference(_arr), 0, (uint)len);
+        //}
+
+        //[Benchmark]
+        //public void Clear()
+        //{
+        //    byte[] arr = _arr;
+        //    Array.Clear(length: arr.Length, array: arr, index: 0);
+        //}
+
+        //[Benchmark]
+        //public void Clear_Old()
+        //{
+        //    _calli1(_arr, 0, _arr.Length);
+        //}
 
         [Benchmark]
-        public uint[] ArrResizeCompatibleValueType()
+        public void Clear_New()
         {
-            uint[] uints = Unsafe.As<uint[]>(_ints); // safe, but avoid 'castclass' for benchmark
-            Array.Resize(ref uints, ArrayLength);
-            return uints;
+            _calli2(_arr);
         }
+
     }
 }

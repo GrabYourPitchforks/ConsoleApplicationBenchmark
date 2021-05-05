@@ -12,19 +12,21 @@ namespace ConsoleAppBenchmark
     public class StrCpyRunner
     {
         private char[] _chars;
-        private string _str;
 
-        [Params(16, 71)]
+        [Params(4, 64, 800, 1024, 2048, 4096)]
         public int CharArrayLength;
 
         [GlobalSetup]
         public void Setup()
         {
             _chars = new char[CharArrayLength];
-            _str = new string(_chars);
         }
 
         [Benchmark]
-        public string Substr() => _str.Substring(2);
+        public object MakeString()
+        {
+            // _ = new object();
+            return new string(_chars);
+        }
     }
 }

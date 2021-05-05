@@ -20,14 +20,44 @@ namespace ConsoleAppBenchmark
         {
             public LocalCoreClrConfig()
             {
-                AddCustom50Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\main",
-                    displayName: "main",
-                    isBaseline: true);
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\main",
+                //    displayName: "main",
+                //    isBaseline: true);
+
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\proto",
+                //    displayName: "proto",
+                //    isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\protomod",
+                //    displayName: "protomod",
+                //    isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\spanfill",
+                //    displayName: "spanfill",
+                //    isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\spanclear",
+                //   displayName: "spanclear",
+                //   isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //   coreRunDirectory: @"C:\Users\levib\Desktop\experiments\spanclear2",
+                //   displayName: "spanclear2",
+                //   isBaseline: false);
+
+                //AddCustom50Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf16trans",
+                //    displayName: "utf16trans",
+                //    isBaseline: false);
 
                 AddCustom50Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\encoder",
-                    displayName: "encoder",
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\utf16transb",
+                    displayName: "utf16trans_b",
                     isBaseline: false);
 
                 AddExporter(DefaultConfig.Instance.GetExporters().ToArray());
@@ -147,7 +177,9 @@ namespace ConsoleAppBenchmark
             //    runner.GetString_FromByteArray();
             //}
 
-            BenchmarkRunner.Run<TextEncoderRunner>(new LocalCoreClrConfig());
+            // BenchmarkRunner.Run<ArrayRunner>(new LocalCoreClrConfig());
+            // BenchmarkRunner.Run<SpanClearRunner>(new LocalCoreClrConfig());
+            // BenchmarkRunner.Run<TextEncoderRunner>(new LocalCoreClrConfig());
             // BenchmarkRunner.Run<TwitterJsonRunner>(new LocalCoreClrConfig());
             // BenchmarkRunner.Run<SpanFwdRunner>(new LocalCoreClrConfig());
             // BenchmarkRunner.Run<Utf8Scenarios>(new LocalCoreClrConfig());
@@ -155,7 +187,12 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<Sha1Runner>(new LocalCoreClrConfig());
             // BenchmarkRunner.Run<BinaryWriterRunner>(new LocalCoreClrConfig());
             // BenchmarkRunner.Run<BinaryWriterRunner_Extended>(new LocalCoreClrConfig());
-            // var summary = BenchmarkRunner.Run<DateTimeRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<MethodInfoRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<TypeCmpRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<StrCpyRunner>(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run<ArrayRunner>(new LocalCoreClrConfig());
+            // BenchmarkSwitcher.FromTypes(new[] { typeof(SpanFillRunner<>) }).RunAll(new LocalCoreClrConfig());
+            // var summary = BenchmarkRunner.Run(typeof(SpanFillRunner<>), new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SpanTrimRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Utf8ValidationRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<SliceRunner>(new LocalCoreClrConfig());
@@ -168,7 +205,7 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<CharUnicodeInfoRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<BitManipulaitonRunner>(new LocalCoreClrConfig());
-            // var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<EncodingRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<FieldInfoLookupRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StrHashRunner2>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<StringHashCodeRunner>(new LocalCoreClrConfig());
