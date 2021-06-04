@@ -21,13 +21,13 @@ namespace ConsoleAppBenchmark
             public LocalCoreClrConfig()
             {
                 AddCustom50Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\baseline",
-                    displayName: "baseline",
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\main",
+                    displayName: "main",
                     isBaseline: true);
 
                 AddCustom50Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\compare",
-                    displayName: "compare",
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\idxofany",
+                    displayName: "idxofany",
                     isBaseline: false);
 
                 AddExporter(DefaultConfig.Instance.GetExporters().ToArray());
@@ -44,8 +44,8 @@ namespace ConsoleAppBenchmark
                     targetFrameworkMoniker: "netcoreapp5.0",
                     displayName: displayName);
 
-                // var job = Job.ShortRun.With(toolchain);
-                var job = Job.Default.WithToolchain(toolchain);
+                var job = Job.ShortRun.With(toolchain);
+                // var job = Job.Default.WithToolchain(toolchain);
 
                 if (isBaseline)
                 {
@@ -129,6 +129,10 @@ namespace ConsoleAppBenchmark
 
         static void Main(string[] args)
         {
+            // Run<IndexOfAnyRunner<byte>>();
+            Run<IndexOfAnyRunner<char>>();
+            // Run<IndexOfAnyRunner<int>>();
+
             // Run<SpanClearRunner>();
             // BenchmarkRunner.Run<GuidRunner>();
 
@@ -147,7 +151,7 @@ namespace ConsoleAppBenchmark
             //    runner.GetString_FromByteArray();
             //}
 
-            BenchmarkRunner.Run<Utf8ParserTests>(new LocalCoreClrConfig());
+            // BenchmarkRunner.Run<Utf8ParserTests>(new LocalCoreClrConfig());
             // BenchmarkRunner.Run<ArrayRunner>(new LocalCoreClrConfig());
             // BenchmarkRunner.Run<SpanClearRunner>(new LocalCoreClrConfig());
             // BenchmarkRunner.Run<TextEncoderRunner>(new LocalCoreClrConfig());
