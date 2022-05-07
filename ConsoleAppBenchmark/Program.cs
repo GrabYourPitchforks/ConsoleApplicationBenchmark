@@ -1,16 +1,11 @@
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Toolchains.CoreRun;
+using System.Buffers;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 namespace ConsoleAppBenchmark
 {
@@ -20,15 +15,20 @@ namespace ConsoleAppBenchmark
         {
             public LocalCoreClrConfig()
             {
-                AddCustom50Toolchain(
+                AddCustom70Toolchain(
                     coreRunDirectory: @"C:\Users\levib\Desktop\experiments\main",
                     displayName: "main",
                     isBaseline: true);
 
-                AddCustom50Toolchain(
-                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\idxofany",
-                    displayName: "idxofany",
+                AddCustom70Toolchain(
+                    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\regex_perf",
+                    displayName: "regex_perf",
                     isBaseline: false);
+
+                //AddCustom70Toolchain(
+                //    coreRunDirectory: @"C:\Users\levib\Desktop\experiments\skip_validation",
+                //    displayName: "skip_validation",
+                //    isBaseline: false);
 
                 AddExporter(DefaultConfig.Instance.GetExporters().ToArray());
                 AddLogger(DefaultConfig.Instance.GetLoggers().ToArray());
@@ -37,15 +37,21 @@ namespace ConsoleAppBenchmark
                 // Add(DisassemblyDiagnoser.Create(new DisassemblyDiagnoserConfig(printAsm: true, recursiveDepth: 2)));
             }
 
-            private void AddCustom50Toolchain(string coreRunDirectory, string displayName, bool enableTieredCompilation = true, bool isBaseline = false, Dictionary<string, string> envVars = default)
+            private void AddCustom70Toolchain(
+                string coreRunDirectory,
+                string displayName,
+                bool enableTieredCompilation = true,
+                bool isBaseline = false,
+                Dictionary<string, string> envVars = default,
+                bool shortRun = false,
+                params string[] isasToSuppress)
             {
                 var toolchain = new CoreRunToolchain(
                     coreRun: new DirectoryInfo(coreRunDirectory).GetFiles("CoreRun.exe").Single(),
-                    targetFrameworkMoniker: "netcoreapp5.0",
+                    targetFrameworkMoniker: "net7.0",
                     displayName: displayName);
 
-                var job = Job.ShortRun.With(toolchain);
-                // var job = Job.Default.WithToolchain(toolchain);
+                var job = ((shortRun) ? Job.ShortRun : Job.Default).WithToolchain(toolchain);
 
                 if (isBaseline)
                 {
@@ -54,8 +60,17 @@ namespace ConsoleAppBenchmark
 
                 if (!enableTieredCompilation)
                 {
-                    envVars ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    envVars ??= new();
                     envVars["COMPLUS_TieredCompilation"] = "0";
+                }
+
+                if (isasToSuppress is not null && isasToSuppress.Length > 0)
+                {
+                    envVars ??= new();
+                    foreach (string isa in isasToSuppress)
+                    {
+                        envVars["COMPLUS_ENABLE" + isa.ToUpperInvariant()] = "0";
+                    }
                 }
 
                 if (envVars != null)
@@ -66,59 +81,7 @@ namespace ConsoleAppBenchmark
                     }
                 }
 
-                // job = job.With(new[] { new EnvironmentVariable("COMPLUS_TieredCompilation", "0") });
-
-                // job = job.WithWarmupCount(10);
-
                 AddJob(job);
-            }
-
-            private void AddCustom60Toolchain(string coreRunDirectory, string displayName, bool enableTieredCompilation = true, bool isBaseline = false, Dictionary<string, string> envVars = default)
-            {
-                var toolchain = new CoreRunToolchain(
-                    coreRun: new DirectoryInfo(coreRunDirectory).GetFiles("CoreRun.exe").Single(),
-                    targetFrameworkMoniker: "net6.0",
-                    displayName: displayName);
-
-                // var job = Job.ShortRun.With(toolchain);
-                var job = Job.Default.WithToolchain(toolchain);
-                // var job = Job.LongRun.With(toolchain);
-
-                if (isBaseline)
-                {
-                    job = job.AsBaseline();
-                }
-
-                if (!enableTieredCompilation)
-                {
-                    envVars ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    envVars["COMPLUS_TieredCompilation"] = "0";
-                }
-
-                if (envVars != null)
-                {
-                    foreach (var (key, value) in envVars)
-                    {
-                        job = job.WithEnvironmentVariable(key, value);
-                    }
-                }
-
-                // job = job.With(new[] { new EnvironmentVariable("COMPLUS_TieredCompilation", "0") });
-
-                // job = job.WithWarmupCount(10);
-
-                AddJob(job);
-            }
-
-            private void AddCustom50Toolchain(string coreRunDirectory, string displayName, bool isBaseline = false, params string[] isasToSuppress)
-            {
-                Dictionary<string, string> envVars = new Dictionary<string, string>();
-                foreach (string isa in isasToSuppress)
-                {
-                    envVars["COMPLUS_ENABLE" + isa.ToUpperInvariant()] = "0";
-                }
-
-                AddCustom50Toolchain(coreRunDirectory, displayName, isBaseline: isBaseline, envVars: envVars);
             }
         }
 
@@ -130,7 +93,7 @@ namespace ConsoleAppBenchmark
         static void Main(string[] args)
         {
             // Run<IndexOfAnyRunner<byte>>();
-            Run<IndexOfAnyRunner<char>>();
+            // Run<IndexOfAnyRunner<char>>();
             // Run<IndexOfAnyRunner<int>>();
 
             // Run<SpanClearRunner>();
@@ -176,7 +139,7 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<ActivatorRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<DictionaryRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<HexRunner>(new LocalCoreClrConfig());
-            // var summary = BenchmarkRunner.Run<RegexRunner>(new LocalCoreClrConfig());
+            var summary = BenchmarkRunner.Run<RegexRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<CharUnicodeInfoRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<BitManipulaitonRunner>(new LocalCoreClrConfig());
@@ -204,7 +167,6 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<ListRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<MemoryRunner>(new LocalCoreClrConfig());
 
-            //var runner = new JsonRunner();
             //runner.Setup();
             //runner.WithVector();
 
