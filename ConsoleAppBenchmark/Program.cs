@@ -15,12 +15,12 @@ namespace ConsoleAppBenchmark
         {
             public LocalCoreClrConfig()
             {
-                AddCustom70Toolchain(
+                AddCustom80Toolchain(
                     coreRunDirectory: @"C:\Users\levib\Desktop\experiments\main",
                     displayName: "main",
                     isBaseline: true);
 
-                AddCustom70Toolchain(
+                AddCustom80Toolchain(
                     coreRunDirectory: @"C:\Users\levib\Desktop\experiments\regex_perf",
                     displayName: "regex_perf",
                     isBaseline: false);
@@ -37,7 +37,7 @@ namespace ConsoleAppBenchmark
                 // Add(DisassemblyDiagnoser.Create(new DisassemblyDiagnoserConfig(printAsm: true, recursiveDepth: 2)));
             }
 
-            private void AddCustom70Toolchain(
+            private void AddCustom80Toolchain(
                 string coreRunDirectory,
                 string displayName,
                 bool enableTieredCompilation = true,
@@ -48,7 +48,7 @@ namespace ConsoleAppBenchmark
             {
                 var toolchain = new CoreRunToolchain(
                     coreRun: new DirectoryInfo(coreRunDirectory).GetFiles("CoreRun.exe").Single(),
-                    targetFrameworkMoniker: "net7.0",
+                    targetFrameworkMoniker: "net8.0",
                     displayName: displayName);
 
                 var job = ((shortRun) ? Job.ShortRun : Job.Default).WithToolchain(toolchain);
@@ -139,7 +139,6 @@ namespace ConsoleAppBenchmark
             // var summary = BenchmarkRunner.Run<ActivatorRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<DictionaryRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<HexRunner>(new LocalCoreClrConfig());
-            var summary = BenchmarkRunner.Run<RegexRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<CharUnicodeInfoRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<Utf8StringRunner>(new LocalCoreClrConfig());
             // var summary = BenchmarkRunner.Run<BitManipulaitonRunner>(new LocalCoreClrConfig());

@@ -10,9 +10,6 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
 
-using nint = System.Int64;
-using nuint = System.UInt64;
-
 namespace ConsoleAppBenchmark
 {
     // [MemoryDiagnoser]

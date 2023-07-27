@@ -8,8 +8,6 @@ using System.Runtime.Intrinsics.X86;
 using System.Text;
 using BenchmarkDotNet.Attributes;
 
-using nuint = System.UInt64;
-using nint = System.Int64;
 using System.Numerics;
 
 namespace ConsoleAppBenchmark
